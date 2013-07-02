@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-def enum(**enums):
+def enum(*enums):
     '''
     Implements enums (only exists in versions >= 3.4)
     '''
-    return type('Enum', (), enums)
+    return type('Enum', (), {e: e for e in enums})

@@ -94,6 +94,12 @@ class MongoBackend(BaseBackend):
 if __name__ == '__main__': # TODO wkpo
     logging.basicConfig(level=logging.DEBUG)
     b = MongoBackend('jrouge_logs', 'wk', 10000, host='dev-mongodb-01.local')
+    # b = MongoBackend(**{
+    #     'db_name': 'jrouge_logs',
+    #     'col_name': 'wk',
+    #     'size': 10000,
+    #     'host': 'dev-mongodb-01.local'
+    # })
     b.record('coucou')
     b.record('wkpo')
     b.record('coucou')

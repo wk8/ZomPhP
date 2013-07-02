@@ -71,7 +71,7 @@ class SoundSubmissiveDeamon(Thread):
         The controller is expected to be a KillerDaddy
         The ID can be anything, as long as it's hashable and well, unique.
         '''
-        super(KillerDeamon, self).__init__(target=self.work, name=str(thread_id))
+        super(SoundSubmissiveDeamon, self).__init__(target=self.work, name=str(thread_id))
         self._id = thread_id
         self._controller = controller
         self._killed = False
@@ -240,7 +240,7 @@ class KillerDaddy(object):
                 # we're done
                 break
 
-    def add_new_threads(self, thread):
+    def add_new_threads(self):
         '''
         Meant to be called from daddy
         '''

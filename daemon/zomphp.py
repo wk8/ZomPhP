@@ -6,10 +6,13 @@ import socket
 import os
 import subprocess
 import errno
+import time
 
 from threads import SoundSubmissiveDeamon, KillerDaddy
 from utils import enum
-from settings import SOCKET_PATH_PREFIX
+from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS
+from constants import SOCKET_PATH_PREFIX
+import backend
 
 
 class ListenerThread(SoundSubmissiveDeamon):
@@ -26,13 +29,13 @@ class ListenerThread(SoundSubmissiveDeamon):
     # the separator between two items
     ITEM_SEPARATOR = '\n'
 
-    def __init__(self, controller, thread_id, socket_suffix, max_connections=socket.SOMAXCONN):
+    def __init__(self, controller, thread_id, socket_suffix='', max_connections=socket.SOMAXCONN):
         '''
         `max_connections` is the max # of connections allowed on the socket
         '''
         super(ListenerThread, self).__init__(controller, thread_id)
         self._status = self.STATUS.NOT_STARTED
-        self._socket_path = SOCKET_PATH_PREFIX + '_' + socket_suffix
+        self._socket_path = SOCKET_PATH_PREFIX + ('_' if socket_suffix else '') + socket_suffix
         self._max_connections = max_connections
         self._socket = None
         self._current_connection = None
@@ -55,7 +58,7 @@ class ListenerThread(SoundSubmissiveDeamon):
         # then connect
         self._socket.bind(self._socket_path)
         # then allow everyone to connect to it
-        subprocess.call("chmod 777 %s" % self._socket, shell=True)
+        subprocess.call("chmod 777 %s" % self._socket_path, shell=True)
         # and listen!
         self._socket.listen(self._max_connections)
         self._status = self.STATUS.LISTENING
@@ -79,10 +82,6 @@ class ListenerThread(SoundSubmissiveDeamon):
             # let's get ready for the next connection
             self._current_connection = None
             self._status = self.STATUS.LISTENING
-        
-        if not data: break
-        print "on process"
-        process_new(data)
 
     def _process_received_data(self, data):
         '''
@@ -112,27 +111,43 @@ class ListenerThread(SoundSubmissiveDeamon):
                 # but any other error is not normal
                 raise
 
-    # We just remove the socket when we're done
+    # we just remove the socket when we're done
     clean_up = _delete_socket_file
 
 
 class Worker(ListenerThread):
     '''
-    The main type of thread: in charge of getting the data from PHP processes and pushing em to the backend
+    The main type of thread: in charge of getting the data from PHP processes and pushing it to the backend
     '''
 
     def __init__(self, *args, **kwargs):
-        self._backend = kwargs['backend']
-        super(ZomPHPWorker, self).__init__(*args, **kwargs)
+        super(Worker, self).__init__(*args, **kwargs)
+        # build the backend
+        self._backend = getattr(backend, BACKEND_CLASS_NAME)(**BACKEND_KWARGS)
 
     def process_item(self, item):
-        '''
-        Just push to the backend
-        '''
+        # just push to the backend
         self._backend.record(item)
 
 
-class 
+class IncomingRequestsListener(ListenerThread):
+    '''
+    A thread that listens for requests for sockets from PHP processes
+    and creates the relevant listener threads
+    '''
+
+    def process_item(self, item):
+        new_thread = Worker(self._controller, int(item), item)
+        self._controller.sumbit_new_thread(new_thread)
+
+
+class OutgoingRequestsListener(ListenerThread):
+    '''
+    Listens to PHP processes signing out (basically, when the SAPI dies)
+    '''
+    # TODO wkpo!!
+    def process_item(self, item):
+        self._controller.notify_completion(int(item))
 
 
 class PingerThread(SoundSubmissiveDeamon):
@@ -147,14 +162,22 @@ class ZomPHPThreadController(KillerDaddy):
     The main thread controller class
     '''
 
-    
-
+    def __init__(self):
+        super(ZomPHPThreadController, self).__init__() # TODO wkpo
 
 
 class MainDeamon(object):
 
-    def __init__(self):
-        
-
     def run(self):
-        
+        pass # TODO wkpo
+
+if __name__ == '__main__': # TODO wkpo
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    class WkThread(ListenerThread):
+        def process_item(self, item):
+            print "dans %s on recoit : %s" % (self.displayable_name, item)
+    c = ZomPHPThreadController()
+    c.sumbit_new_thread(WkThread(c, 'in'))
+    c.add_new_threads()
+
