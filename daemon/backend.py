@@ -17,6 +17,7 @@ class BaseBackend(object):
         '''
         raise NotImplementedError
 
+
 class MongoBackend(BaseBackend):
     '''
     Just records everything in mongo
@@ -29,7 +30,7 @@ class MongoBackend(BaseBackend):
 
     def __init__(self, db_name, col_name, size, *mongo_client_args, **mongo_client_kwargs):
         '''
-        The size is the size of the Mongo capped collection (in bytes)
+        The size is the size of the Mongo capped collection (in bytes) - should be big enough to hold the whole thing
         The last 2 args are passed as is to pymongo's MongoClient's constuctor
         (see http://api.mongodb.org/python/current/api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient)
         '''
