@@ -90,7 +90,8 @@ class ListenerThread(SoundSubmissiveDeamon):
         self._current_received_string += data
         new_items_raw, _, self._current_received_string = self._current_received_string.rpartition(self.ITEM_SEPARATOR)
         for new_item in new_items_raw.split(self.ITEM_SEPARATOR):
-            self.process_item(new_item)
+            if new_item:
+                self.process_item(new_item)
 
     def do_work(self):
         {
