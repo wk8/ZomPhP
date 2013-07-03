@@ -201,6 +201,7 @@ class KillerDaddy(object):
         '''
         child_id = self._get_child_id(child)
         if child_id in self._threads:
+            logging.debug('Killing child ID %s' % child_id)
             self._do_kill_child(self._threads[child_id])
             return True
         return False
@@ -216,6 +217,7 @@ class KillerDaddy(object):
         '''
         Can be called by anyone
         '''
+        logging.debug('New thread submitted: %s' % thread.displayable_name)
         self._create_queue.put(thread)
 
     def _add_thread(self, thread):
@@ -225,6 +227,7 @@ class KillerDaddy(object):
         (better to leave it to the main thread IMHO)
         Also starts the new thread
         '''
+        logging.debug('Starting new thread: %s' % thread.displayable_name)
         self._threads[thread.id] = thread
         thread.start()
 
