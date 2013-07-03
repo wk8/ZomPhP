@@ -10,7 +10,7 @@ import time
 
 from threads import SoundSubmissiveDeamon, KillerDaddy
 from utils import enum
-from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS
+from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI
 from constants import SOCKET_PATH_PREFIX
 import backend
 
@@ -29,18 +29,23 @@ class ListenerThread(SoundSubmissiveDeamon):
     # the separator between two items
     ITEM_SEPARATOR = '\n'
 
-    def __init__(self, controller, thread_id, socket_suffix='', max_connections=socket.SOMAXCONN):
+    def __init__(self, controller, thread_id, max_connections=socket.SOMAXCONN):
         '''
         `max_connections` is the max # of connections allowed on the socket
         '''
         super(ListenerThread, self).__init__(controller, thread_id)
         self._status = self.STATUS.NOT_STARTED
-        self._socket_path = SOCKET_PATH_PREFIX + ('_' if socket_suffix else '') + socket_suffix
+        self._socket_path = self.get_socket_path_from_id(thread_id)
         self._max_connections = max_connections
         self._socket = None
         self._current_connection = None
         # the ongoing received data (might be distributed across several received)
         self._current_received_string = ''
+
+    @staticmethod
+    def get_socket_path_from_id(thread_id):
+        socket_suffix = str(thread_id)
+        return SOCKET_PATH_PREFIX + ('_' if socket_suffix else '') + socket_suffix
 
     def process_item(self, item):
         '''
@@ -52,6 +57,7 @@ class ListenerThread(SoundSubmissiveDeamon):
         '''
         Connects to the socket
         '''
+        logging.debug('Listener %s opening its socket' % self.displayable_name)
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         # remove the old file, if any
         self._delete_socket_file()
@@ -62,6 +68,7 @@ class ListenerThread(SoundSubmissiveDeamon):
         # and listen!
         self._socket.listen(self._max_connections)
         self._status = self.STATUS.LISTENING
+        logging.debug('Listener %s successfully opened its socket' % self.displayable_name)
 
     def _accept_connection(self):
         '''
@@ -91,6 +98,7 @@ class ListenerThread(SoundSubmissiveDeamon):
         new_items_raw, _, self._current_received_string = self._current_received_string.rpartition(self.ITEM_SEPARATOR)
         for new_item in new_items_raw.split(self.ITEM_SEPARATOR):
             if new_item:
+                logging.debug('Listener %s processing new data: %s' % (self.displayable_name, new_item))
                 self.process_item(new_item)
 
     def do_work(self):
@@ -113,7 +121,8 @@ class ListenerThread(SoundSubmissiveDeamon):
                 raise
 
     # we just remove the socket when we're done
-    clean_up = _delete_socket_file
+    def clean_up(self, killed=False):
+        self._delete_socket_file()
 
 
 class Worker(ListenerThread):
@@ -137,8 +146,12 @@ class IncomingRequestsListener(ListenerThread):
     and creates the relevant listener threads
     '''
 
+    IN_LISTENER_ID = 'in'
+    IN_CLI_LISTENER_ID = 'in_cli'
+    OUT_LISTENER_ID = 'out'
+
     def process_item(self, item):
-        new_thread = Worker(self._controller, int(item), item)
+        new_thread = Worker(self._controller, int(item))
         self._controller.sumbit_new_thread(new_thread)
 
 
@@ -146,7 +159,7 @@ class OutgoingRequestsListener(ListenerThread):
     '''
     Listens to PHP processes signing out (basically, when the SAPI dies)
     '''
-    # TODO wkpo!!
+
     def process_item(self, item):
         self._controller.notify_completion(int(item))
 
@@ -155,7 +168,28 @@ class PingerThread(SoundSubmissiveDeamon):
     '''
     In charge of pinging all listener threads
     '''
-    pass # TODO wkpo
+
+    PINGER_THREAD_ID = 'pinger'
+
+    def __init__(self, controller):
+        '''
+        There's only one such thread!
+        '''
+        logging.debug('Pinger thread alive')
+        super(PingerThread, self).__init__(controller, self.PINGER_THREAD_ID)
+        self._thread_ids = []
+
+    def do_work(self):
+        try:
+            child_id = self._thread_ids.pop()
+            if isinstance(child_id, int):
+                # otherwise it's one of the 4 control threads, no need to ping it
+                ZomPHPThreadController.ping_listener(child_id)
+        except IndexError:
+            # the list is empty, we need to grab a new fresh one from daddy!
+            self._thread_ids = self._controller.get_current_children_ids()
+            # we don't want to be looping too fast on that, nothing critical here
+            time.sleep(1)
 
 
 class ZomPHPThreadController(KillerDaddy):
@@ -165,20 +199,86 @@ class ZomPHPThreadController(KillerDaddy):
 
     def __init__(self):
         super(ZomPHPThreadController, self).__init__() # TODO wkpo
+        self.cleanup()
+        # add the listener threads according the configuration
+        self._add_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_LISTENER_ID))
+        self._add_thread(OutgoingRequestsListener(self, IncomingRequestsListener.OUT_LISTENER_ID))
+        if ENABLE_FOR_CLI:
+            self._add_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_CLI_LISTENER_ID))
+        # and the pinger thread
+        self._add_thread(PingerThread(self))
+        logging.debug('Controller successfully loaded!')
+
+    @staticmethod
+    def cleanup():
+        '''
+        Deletes all the old sockets
+        '''
+        logging.info('Deleting all old sockets')
+        subprocess.call(r'rm -f %s*' % SOCKET_PATH_PREFIX, shell=True)
+
+    @staticmethod
+    def ping_listener(child_id):
+        '''
+        Tries to ping a child socket, but will ignore any error
+        '''
+        socket_path = ListenerThread.get_socket_path_from_id(child_id)
+        try:
+            sckt = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sckt.connect(socket_path)
+            sckt.send(ListenerThread.ITEM_SEPARATOR)
+            sckt.close()
+        except socket.error as ex:
+            logging.debug('Got a socket error when pinging %s : %s' % (socket_path, ex))
+
+    def ping_all_listeners(self):
+        '''
+        Pings all listeners, including control threads
+        Meant to be called exclusively from daddy
+        '''
+        for child_id in self._threads.keys():
+            if child_id != PingerThread.PINGER_THREAD_ID:
+                self.ping_listener(child_id)
 
 
 class MainDeamon(object):
 
+    # TODO wkpo proper sleep
+    # the minimum time spent in one cycle, in milliseconds
+    MIN_TIME_ONE_CYCLE = 50
+
+    def __init__(self):
+        self._controller = ZomPHPThreadController()
+
     def run(self):
-        pass # TODO wkpo
+        try:
+            while True: # TODO wkpo killable? catcher les signals sys?
+                self._do_one_cycle()
+                time.sleep(0.05) # TODO wkpo
+        except BaseException as ex:
+            logging.error('Caught exception %s, cleaning up and shutting down' % ex.__class__.__name__)
+            self._controller.kill_em_all()
+            # we ping all listeners to make sure they get the 'kill' order
+            self._controller.ping_all_listeners()
+            self._controller.cleanup()
+            raise
+
+    def _do_one_cycle(self):
+        # take care of all your children, daddy
+        self._controller.check_children_failures()
+        self._controller.remove_done_threads()
+        self._controller.add_new_threads()
 
 if __name__ == '__main__': # TODO wkpo
     import logging
     logging.basicConfig(level=logging.DEBUG)
-    class WkThread(ListenerThread):
-        def process_item(self, item):
-            print "dans %s on recoit : %s" % (self.displayable_name, item)
-    c = ZomPHPThreadController()
-    c.sumbit_new_thread(WkThread(c, 'in'))
-    c.add_new_threads()
+    # class WkThread(ListenerThread):
+    #     def process_item(self, item):
+    #         print "dans %s on recoit : %s" % (self.displayable_name, item)
+    # c = ZomPHPThreadController()
+    # c.sumbit_new_thread(WkThread(c, 'in', 'in'))
+    # c.sumbit_new_thread(WkThread(c, 'out', 'out'))
+    # c.add_new_threads()
+    d = MainDeamon()
+    d.run()
 

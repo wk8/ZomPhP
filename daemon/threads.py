@@ -228,14 +228,15 @@ class KillerDaddy(object):
         self._threads[thread.id] = thread
         thread.start()
 
-    def remove_done_thread(self):
+    def remove_done_threads(self):
         '''
         Meant to be called from daddy
         '''
         while True:
             try:
                 child_id = self._done_queue.get_nowait()
-                self._threads.pop(child_id, None)
+                child = self._threads.pop(child_id, None)
+                self._do_kill_child(child)
             except Empty:
                 # we're done
                 break
@@ -251,6 +252,12 @@ class KillerDaddy(object):
             except Empty:
                 # we're done
                 break
+
+    def get_current_children_ids(self):
+        '''
+        Gets a list (copy) of the current children's ids
+        '''
+        return self._threads.keys()
 
 if __name__ == '__main__': # TODO wkpo
     pass
