@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import logging # TODO wkpo
+import logging
 
 import pymongo
 
@@ -16,6 +16,15 @@ class BaseBackend(object):
         Report to whatever backend lies here
         '''
         raise NotImplementedError
+
+
+class DummyBackend(BaseBackend):
+    '''
+    Just log what ya get
+    '''
+
+    def record(self, function):
+        logging.debug('DummyBackend received: %s' % function)
 
 
 class MongoBackend(BaseBackend):
