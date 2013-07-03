@@ -26,7 +26,7 @@ class ExceptionBuffer(object):
 
     # see __init__'s doc below
     _DEFAULT_MAX_EXCPTS = 3
-    _DEFAULT_MAX_SPAN = 300 # 5 minutes # TODO wkpo mettre 300
+    _DEFAULT_MAX_SPAN = 300  # 5 minutes
 
     def __init__(self, max_excpts=_DEFAULT_MAX_EXCPTS, max_span=_DEFAULT_MAX_SPAN):
         '''
@@ -168,7 +168,7 @@ class KillerDaddy(object):
         except Empty:
             # no error in the queue, daddy can live another day
             return
-    
+
     @staticmethod
     def _do_kill_child(child):
         try:

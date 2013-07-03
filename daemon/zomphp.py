@@ -199,7 +199,7 @@ class ZomPHPThreadController(KillerDaddy):
     '''
 
     def __init__(self):
-        super(ZomPHPThreadController, self).__init__() # TODO wkpo
+        super(ZomPHPThreadController, self).__init__()
         self.cleanup()
         # add the listener threads according the configuration
         self._add_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_LISTENER_ID))
