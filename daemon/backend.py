@@ -20,7 +20,7 @@ class BaseBackend(object):
 
 class DummyBackend(BaseBackend):
     '''
-    Just log what ya get
+    Just log what ya get (for debugging purposes only)
     '''
 
     def record(self, function):
