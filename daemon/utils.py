@@ -14,6 +14,7 @@ def enum(*enums):
     '''
     return type('Enum', (), {e: e for e in enums})
 
+
 def set_logger():
     '''
     Sets the right logger
@@ -31,6 +32,7 @@ def set_logger():
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.setLevel(log_level)
+
         # also log any uncaught exception
         def hook(type, value, tb):
             logging.exception('Uncaught exception of type %s in thread %s: %s\n%s' % (type.__name__, threading.current_thread().name, str(value), ''.join(traceback.format_tb(tb))))

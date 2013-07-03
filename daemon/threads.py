@@ -263,7 +263,3 @@ class KillerDaddy(object):
         Gets a list (copy) of the current children's ids
         '''
         return self._threads.keys()
-
-if __name__ == '__main__': # TODO wkpo
-    pass
-
