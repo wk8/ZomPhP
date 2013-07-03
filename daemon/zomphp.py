@@ -8,10 +8,11 @@ import subprocess
 import errno
 import time
 import datetime
+import logging
 
 from threads import SoundSubmissiveDeamon, KillerDaddy
 from utils import enum
-from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI
+from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI, LOG_FILE, LOG_LEVEL
 from constants import SOCKET_PATH_PREFIX
 import backend
 
@@ -202,12 +203,12 @@ class ZomPHPThreadController(KillerDaddy):
         super(ZomPHPThreadController, self).__init__()
         self.cleanup()
         # add the listener threads according the configuration
-        self._add_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_LISTENER_ID))
-        self._add_thread(OutgoingRequestsListener(self, IncomingRequestsListener.OUT_LISTENER_ID))
+        self.sumbit_new_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_LISTENER_ID))
+        self.sumbit_new_thread(OutgoingRequestsListener(self, IncomingRequestsListener.OUT_LISTENER_ID))
         if ENABLE_FOR_CLI:
-            self._add_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_CLI_LISTENER_ID))
+            self.sumbit_new_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_CLI_LISTENER_ID))
         # and the pinger thread
-        self._add_thread(PingerThread(self))
+        self.sumbit_new_thread(PingerThread(self))
         logging.debug('Controller successfully loaded!')
 
     @staticmethod
@@ -242,7 +243,7 @@ class ZomPHPThreadController(KillerDaddy):
                 self.ping_listener(child_id)
 
 
-class MainDeamon(object):
+class ZomPHPApp(object):
 
     # the minimum time spent in one cycle, in SECONDS (can, and obviously should, be a float)
     MIN_TIME_ONE_CYCLE = 0.05
@@ -253,7 +254,7 @@ class MainDeamon(object):
 
     def run(self):
         try:
-            while True: # TODO wkpo killable? catcher les signals sys?
+            while True:
                 self._last_run_date = datetime.datetime.now()
                 self._do_one_cycle()
                 self._sleep()
@@ -281,16 +282,16 @@ class MainDeamon(object):
         else:
             logging.debug('Didn\'t have to sleep! (took %s s more)' % -diff)
 
-if __name__ == '__main__': # TODO wkpo
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-    # class WkThread(ListenerThread):
-    #     def process_item(self, item):
-    #         print "dans %s on recoit : %s" % (self.displayable_name, item)
-    # c = ZomPHPThreadController()
-    # c.sumbit_new_thread(WkThread(c, 'in', 'in'))
-    # c.sumbit_new_thread(WkThread(c, 'out', 'out'))
-    # c.add_new_threads()
-    d = MainDeamon()
-    d.run()
 
+if __name__ == '__main__':
+    if LOG_FILE:
+        # set the right logging if set to
+        # TODO wkpo rights?
+        log_level = getattr(logging, LOG_LEVEL, logging.WARNING)
+        logging.basicConfig(level=log_level)
+        handler = logging.FileHandler(LOG_FILE)
+        logger = logging.getLogger('zomphp')
+        logger.addHandler(handler)
+        logger.setLevel(log_level)
+    app = ZomPHPApp()
+    app.run()

@@ -13,3 +13,6 @@ BACKEND_KWARGS = {
     'size': 104857600, # 100 MB
     'host': 'XXX'
 }
+
+LOG_FILE = '/var/log/zomphp.log'
+LOG_LEVEL = 'WARNING' # one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', otherwise defaults to 'WARNING'

@@ -98,18 +98,3 @@ class MongoBackend(BaseBackend):
     def record(self, function):
         doc = {self._KEY_NAME: function}
         self._mongo_col.update(doc, doc, upsert=True, manipulate=False, w=0, check_keys=False)
-
-
-if __name__ == '__main__': # TODO wkpo
-    logging.basicConfig(level=logging.DEBUG)
-    b = MongoBackend('jrouge_logs', 'wk', 10000, host='dev-mongodb-01.local')
-    # b = MongoBackend(**{
-    #     'db_name': 'jrouge_logs',
-    #     'col_name': 'wk',
-    #     'size': 10000,
-    #     'host': 'dev-mongodb-01.local'
-    # })
-    b.record('coucou')
-    b.record('wkpo')
-    b.record('coucou')
-
