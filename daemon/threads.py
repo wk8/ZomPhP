@@ -7,6 +7,7 @@ A few helper classes to handle thread pools
 import logging
 import datetime
 import time
+import threading
 
 from Queue import Queue, Empty
 from threading import Thread
@@ -51,12 +52,13 @@ class ExceptionBuffer(object):
         self.clean()
         self._errors[datetime.datetime.now()] = excp
         if len(self._errors) > self._max_excpts:
-            logging.error('Too many errors too quickly!')
+            logging.error('Too many errors too quickly in thread %s!' % threading.current_thread().name)
             for e in self._errors.values():
                 logging.exception(e)
             return False
-        # let's give it some time, you never know
-        time.sleep(1)
+        # let's log it
+        logging.error('Buffering exception of type %s in thread %s:' % (excp.__class__.__name__, threading.current_thread().name))
+        logging.exception(excp)
         return True
 
 

@@ -11,8 +11,8 @@ import datetime
 import logging
 
 from threads import SoundSubmissiveDeamon, KillerDaddy
-from utils import enum
-from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI, LOG_FILE, LOG_LEVEL
+from utils import enum, set_logger
+from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI
 from constants import SOCKET_PATH_PREFIX
 import backend
 
@@ -284,14 +284,6 @@ class ZomPHPApp(object):
 
 
 if __name__ == '__main__':
-    if LOG_FILE:
-        # set the right logging if set to
-        # TODO wkpo rights?
-        log_level = getattr(logging, LOG_LEVEL, logging.WARNING)
-        logging.basicConfig(level=log_level)
-        handler = logging.FileHandler(LOG_FILE)
-        logger = logging.getLogger('zomphp')
-        logger.addHandler(handler)
-        logger.setLevel(log_level)
+    set_logger()
     app = ZomPHPApp()
     app.run()
