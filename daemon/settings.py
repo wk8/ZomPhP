@@ -13,3 +13,6 @@ BACKEND_KWARGS = {
     'size': 10000,
     'host': 'dev-mongodb-01.local'
 }
+
+# TODO wkpo
+PHP_ROOT_DIR = None
