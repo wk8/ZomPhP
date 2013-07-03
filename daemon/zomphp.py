@@ -7,6 +7,7 @@ import os
 import subprocess
 import errno
 import time
+import datetime
 
 from threads import SoundSubmissiveDeamon, KillerDaddy
 from utils import enum
@@ -243,18 +244,19 @@ class ZomPHPThreadController(KillerDaddy):
 
 class MainDeamon(object):
 
-    # TODO wkpo proper sleep
-    # the minimum time spent in one cycle, in milliseconds
-    MIN_TIME_ONE_CYCLE = 50
+    # the minimum time spent in one cycle, in SECONDS (can, and obviously should, be a float)
+    MIN_TIME_ONE_CYCLE = 0.05
 
     def __init__(self):
         self._controller = ZomPHPThreadController()
+        self._last_run_date = datetime.datetime.now()
 
     def run(self):
         try:
             while True: # TODO wkpo killable? catcher les signals sys?
+                self._last_run_date = datetime.datetime.now()
                 self._do_one_cycle()
-                time.sleep(0.05) # TODO wkpo
+                self._sleep()
         except BaseException as ex:
             logging.error('Caught exception %s, cleaning up and shutting down' % ex.__class__.__name__)
             self._controller.kill_em_all()
@@ -268,6 +270,16 @@ class MainDeamon(object):
         self._controller.check_children_failures()
         self._controller.remove_done_threads()
         self._controller.add_new_threads()
+
+    def _sleep(self):
+        '''
+        If the cycle has taken less time than MIN_TIME_ONE_CYCLE s, we sleep to complete
+        '''
+        diff = self.MIN_TIME_ONE_CYCLE - (datetime.datetime.now() - self._last_run_date).total_seconds()
+        if diff >= 0:
+            time.sleep(diff)
+        else:
+            logging.debug('Didn\'t have to sleep! (took %s s more)' % -diff)
 
 if __name__ == '__main__': # TODO wkpo
     import logging
