@@ -10,7 +10,8 @@ function install_daemonize
 	&& cd daemonize \
 	&& ./configure \
 	&& make \
-	&& make install
+	&& make install \
+	|| exit $?
 }
 
 # you need git!

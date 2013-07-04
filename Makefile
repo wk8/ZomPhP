@@ -2,13 +2,12 @@
 
 .SILENT: check_root
 
-all:
+install: check_root
+	./bin/install_daemonize.sh
+	./bin/install_xdebug.sh
 
 start: check_root
 	./bin/start_daemon.sh
-
-install_daemonize:
-	./bin/install_daemonize.sh
 
 check_root:
 	./bin/check_root.sh
