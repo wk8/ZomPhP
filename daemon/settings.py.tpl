@@ -14,5 +14,10 @@ BACKEND_KWARGS = {
     'host': 'XXX'
 }
 
-LOG_FILE = '/var/log/zomphp.log'
+# logging options
+LOG_FILE = '/var/log/zomphp.log' # the daemon's owner must obviously have the right to write in there
 LOG_LEVEL = 'WARNING' # one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', otherwise defaults to 'WARNING'
+
+# the user to run ZomPHP's daemon as
+# leave to None if you want to run it as 'root' (not recommended)
+ZOMPHP_DEAMON_OWNER = None

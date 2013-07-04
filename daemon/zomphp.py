@@ -1,4 +1,7 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# TODO wkpo venv?
 
 # 1 pinger that connects, 1 that listens to new, 1 that listens to killed/done, daddy kills, daddy gives, other workers
 
