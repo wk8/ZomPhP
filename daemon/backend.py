@@ -43,7 +43,7 @@ class MongoBackend(BaseBackend):
         The last arg is passed as is to pymongo's MongoClient's constuctor
         (see http://api.mongodb.org/python/current/api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient)
         '''
-        client = pymongo.MongoClient(*mongo_client_args, **mongo_client_kwargs)
+        client = pymongo.MongoClient(**mongo_client_kwargs)
         if user:
             client[db_name].authenticate(user, password)
         self._create_mongo_col(client, db_name, col_name, size)
