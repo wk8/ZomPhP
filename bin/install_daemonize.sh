@@ -6,7 +6,7 @@ function install_daemonize
 {
 	cd /tmp \
 	&& rm -rf daemonize \
-	&& git clone git@github.com:bmc/daemonize.git \
+	&& git clone https://github.com/bmc/daemonize.git \
 	&& cd daemonize \
 	&& ./configure \
 	&& make \
