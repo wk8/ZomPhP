@@ -21,6 +21,7 @@ install_daemon: check_root
 	# Install the init.d script
 	$(eval ESCAPED_INSTALL_DIR := $(shell echo $(INSTALL_DIR) | sed 's/\//\\\//g'))
 	sed 's/<INSTALL_DIR>/$(ESCAPED_INSTALL_DIR)/g' $(INSTALL_DIR)/daemon/zomphp.init.d > /etc/init.d/zomphp
+	chmod +x /etc/init.d/zomphp
 	# Create the settings folder
 	mkdir -p /etc/zomphp
 	touch /etc/zomphp/__init__.py
