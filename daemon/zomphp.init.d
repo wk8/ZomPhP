@@ -5,7 +5,7 @@ INSTALL_DIR=<INSTALL_DIR>
 
 case "$1" in
 'start' | 'stop' | 'restart' | 'status')
-	make -C $INSTALL_DIR "$1" || exit $?
+	make --no-print-directory -C $INSTALL_DIR "$1" || exit $?
 ;;
 
 *)

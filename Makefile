@@ -44,19 +44,19 @@ start: check_root
 
 stop: check_root
 	@echo "Stopping ZomPHP!"
-	make status &> /dev/null || eval 'echo \"ZomPHP is not running\" && exit 1'"
-	kill `cat $(LCK_FILE)`
+	/bin/bash -c "make status &> /dev/null || eval 'echo \"ZomPHP is not running\" && exit 1'"
+	kill `cat $(LCK_FILE)` # FIXME: graceful stop
 
 restart: stop start
 
 status: check_root
-	/bin/bash -c "ps -p `/bin/bash -c '[ -a $(LCK_FILE) ] && cat $(LCK_FILE) || echo 1'` -o command= | grep zomphp.py > /dev/null && echo \"ZomPHP appears to be running\" || eval 'echo \"ZomPHP is not running\" && exit 1'"
+	@/bin/bash -c "ps -p `/bin/bash -c '[ -a $(LCK_FILE) ] && cat $(LCK_FILE) || echo 1'` -o command= | grep zomphp.py > /dev/null && echo \"ZomPHP appears to be running\" || eval 'echo \"ZomPHP is not running\" && exit 1'"
 
 check_root:
-	/bin/bash -c "[[ `whoami` == 'root' ]] || eval 'echo \"You need to be root to run this script\" && exit 1'"
+	@/bin/bash -c "[[ `whoami` == 'root' ]] || eval 'echo \"You need to be root to run this script\" && exit 1'"
 
 check_git:
-	/bin/bash -c "which git &> /dev/null || eval 'echo \"You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)\" && exit 1'"
+	@/bin/bash -c "which git &> /dev/null || eval 'echo \"You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)\" && exit 1'"
 
 clean:
 	find . -type f -name "*.pyc" -print0 -exec rm -f {} \;
