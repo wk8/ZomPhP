@@ -14,6 +14,4 @@ function install_daemonize
 	|| exit $?
 }
 
-# you need git!
-which git &> /dev/null || eval 'echo "You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)" && exit 1'
 which daemonize &> /dev/null || install_daemonize

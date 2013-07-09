@@ -251,23 +251,36 @@ class ZomPHPApp(object):
     # the minimum time spent in one cycle, in SECONDS (can, and obviously should, be a float)
     MIN_TIME_ONE_CYCLE = 0.05
 
+    # the amount of time given to children before killing them -9 at shutdown time (in seconds)
+    GRACE_PERIOD = 60
+
     def __init__(self):
         self._controller = ZomPHPThreadController()
         self._last_run_date = datetime.datetime.now()
 
     def run(self):
+        self._check_ulimit()
         try:
             while True:
                 self._last_run_date = datetime.datetime.now()
                 self._do_one_cycle()
                 self._sleep()
         except BaseException as ex:
-            logging.error('Caught exception %s, cleaning up and shutting down' % ex.__class__.__name__)
-            self._controller.kill_em_all()
+            logging.error('Caught exception %s (%s), cleaning up and shutting down' % (ex.__class__.__name__, ex))
+            logging.exception(ex)
             # we ping all listeners to make sure they get the 'kill' order
-            self._controller.ping_all_listeners()
-            self._controller.cleanup()
-            raise
+            try:
+                self._controller.kill_em_all()
+                self._controller.ping_all_listeners()
+                self._controller.cleanup()
+            except BaseException as exc:
+                # we're shutting down anyway, just log it and ignore it
+                logging.error('Exception of type %s when trying to shut down (%s)!' % (exc.__class__.__name__, exc))
+                logging.exception(ex)
+            # force shut down in any case!
+            # we still give children a reasonable amount of time to shut down gracefully
+            time.sleep(self.GRACE_PERIOD)
+            subprocess.call('kill -9 %d' % os.getpid(), shell=True)
 
     def _do_one_cycle(self):
         # take care of all your children, daddy
@@ -285,6 +298,10 @@ class ZomPHPApp(object):
         else:
             logging.debug('Didn\'t have to sleep! (took %s s more)' % -diff)
 
+    def _check_ulimit():
+        '''
+        Checks the current user has the right to have a somewhat large 
+        '''
 
 if __name__ == '__main__':
     set_logger()
