@@ -9,7 +9,7 @@ ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 .PHONY: check_dependencies check_root check_venv clean install install_daemon remove_dir restart start status stop uninstall status
 
-.SILENT: check_dependencies check_root start status stop
+.SILENT: check_dependencies check_root check_venv start status stop
 
 install: check_root check_dependencies install_daemon
 	@echo "Installing daemonize..."
@@ -38,7 +38,7 @@ ifndef VENV_DIR_LOC
 	$(eval VENV_DIR_LOC := $(ROOT_DIR))
 endif
 	$(eval VENV_DIR := $(VENV_DIR_LOC)/$(VENV_DIR_NAME))
-	@/bin/bash -c "[ -d $(VENV_DIR) ] || eval 'echo \"Creating the virtualenv in $(VENV_DIR) and installing the requirements\" && virtualenv $(VENV_DIR) --no-site-packages && echo \"$(VENV_DIR)/bin/pip install --upgrade -r $(ROOT_DIR)/requirements.txt\"'"
+	/bin/bash -c "[ -d $(VENV_DIR) ] || eval 'echo \"Creating the virtualenv in $(VENV_DIR) and installing the requirements\" && virtualenv $(VENV_DIR) --no-site-packages && $(VENV_DIR)/bin/pip install --upgrade -r $(ROOT_DIR)/requirements.txt'"
 
 uninstall: check_root
 	@echo "Uninstalling ZomPHP..."
@@ -56,8 +56,8 @@ start: check_root check_venv
 	/bin/bash -c "eval 'ulimit -n $(ULIMIT_FILES) $(OWNER) || echo \"WARNING: unable to set the ulimit\"' && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py"
 
 stop: check_root
-	echo "Stopping ZomPHP!"
 	/bin/bash -c "make status &> /dev/null || eval 'echo \"ZomPHP is not running\" && exit 1'"
+	echo "Stopping ZomPHP!"
 	kill `cat $(LCK_FILE)` # FIXME: graceful stop
 
 restart: stop start
