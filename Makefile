@@ -4,7 +4,7 @@ INSTALL_DIR := /usr/lib/zomphp
 ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 
-.PHONY: clean
+.PHONY: check_git check_root clean install install_daemon remove_dir restart start status stop uninstall status
 
 .SILENT: check_root status check_git
 
@@ -14,7 +14,7 @@ install: check_root check_git install_daemon
 	@echo "Installing xdebug..."
 	$(ROOT_DIR)/bin/install_xdebug.sh
 
-install_daemon:
+install_daemon: check_root
 	@echo "Installing ZomPHP..."
 	@make remove_dir
 	git clone https://github.com/wk8/ZomPhP.git $(INSTALL_DIR)
@@ -23,7 +23,7 @@ install_daemon:
 	# Create the settings folder
 	mkdir -p /etc/zomphp
 	touch /etc/zomphp/__init__.py
-	[ -a /etc/zomphp/settings.py ] || cp $(INSTALL_DIR)/daemon/setting.py.tpl /etc/zomphp/settings.py
+	[ -a /etc/zomphp/settings.py ] || cp $(INSTALL_DIR)/daemon/settings.py.tpl /etc/zomphp/settings.py
 
 
 uninstall:
@@ -37,12 +37,13 @@ remove_dir:
 
 start: check_root
 	@echo "Starting ZomPHP!"
-	$(eval OWNER := $(shell $(ROOT_DIR)/daemon/get_daemon_owner.py))
+	$(eval OWNER := $(shell $(ROOT_DIR)/daemon/zomphp.py --get-owner))
 	daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py
 
 stop: check_root
 	@echo "Stopping ZomPHP!"
-	# TODO wkpo
+	make status &> /dev/null || eval 'echo \"ZomPHP is not running\" && exit 1'"
+	kill `cat $(LCK_FILE)`
 
 restart: stop start
 
@@ -54,3 +55,6 @@ check_root:
 
 check_git:
 	/bin/bash -c "which git &> /dev/null || eval 'echo \"You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)\" && exit 1'"
+
+clean:
+	find . -type f -name "*.pyc" -print0 -exec rm -f {} \;

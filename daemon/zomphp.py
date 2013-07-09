@@ -3,21 +3,25 @@
 
 # TODO wkpo venv?
 
-# 1 pinger that connects, 1 that listens to new, 1 that listens to killed/done, daddy kills, daddy gives, other workers
-
 import socket
 import os
+import sys
 import subprocess
 import errno
 import time
 import datetime
 import logging
+import argparse
+
+if os.path.exists('/etc/zomphp/settings.py'):
+    sys.path.append('/etc/zomphp')
 
 from threads import SoundSubmissiveDeamon, KillerDaddy
 from utils import enum, set_logger
-from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI
+from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI, ZOMPHP_DEAMON_OWNER
 from constants import SOCKET_PATH_PREFIX
 import backend
+
 
 
 class ListenerThread(SoundSubmissiveDeamon):
@@ -303,7 +307,25 @@ class ZomPHPApp(object):
         Checks the current user has the right to have a somewhat large 
         '''
 
+
+def main():
+    # argument processing
+    parser = argparse.ArgumentParser(
+        description='Detect your PHP dead code'
+    )
+    parser.add_argument('--get-owner', dest='get_owner', action='store_const',
+                        const=True, default=False, help='Outputs the deamon\'s owner'
+                        ' as set in the configuration, then exits')
+    args = parser.parse_args()
+
+    if args.get_owner:
+        print ZOMPHP_DEAMON_OWNER if ZOMPHP_DEAMON_OWNER else 'root'
+    else:
+        # normal operation
+        set_logger()
+        app = ZomPHPApp()
+        app.run()
+
+
 if __name__ == '__main__':
-    set_logger()
-    app = ZomPHPApp()
-    app.run()
+    main()
