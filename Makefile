@@ -24,7 +24,7 @@ install_daemon: check_root
 	# Create the settings folder
 	mkdir -p /etc/zomphp
 	touch /etc/zomphp/__init__.py
-	[ -a /etc/zomphp/settings.py ] || cp $(INSTALL_DIR)/daemon/settings.py.tpl /etc/zomphp/settings.py
+	[ -a "/etc/zomphp/settings.py" ] || cp $(INSTALL_DIR)/daemon/settings.py.tpl /etc/zomphp/settings.py
 
 
 uninstall:
