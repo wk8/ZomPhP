@@ -19,7 +19,8 @@ install_daemon: check_root
 	@make remove_dir
 	git clone https://github.com/wk8/ZomPhP.git $(INSTALL_DIR)
 	# Install the init.d script
-	sed 's/<INSTALL_DIR>/`echo $(ROOT_DIR) | sed 's/\//\\\//g'`/g' $(INSTALL_DIR)/daemon/zomphp.init.d > /etc/init.d/zomphp
+	$(eval ESCAPED_ROOT_DIR := $(shell echo $(ROOT_DIR) | sed 's/\//\\\//g'))
+	sed 's/<INSTALL_DIR>/$(ESCAPED_ROOT_DIR)/g' $(INSTALL_DIR)/daemon/zomphp.init.d > /etc/init.d/zomphp
 	# Create the settings folder
 	mkdir -p /etc/zomphp
 	touch /etc/zomphp/__init__.py
