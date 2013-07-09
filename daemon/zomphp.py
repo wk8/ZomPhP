@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# TODO wkpo venv?
-
 import socket
 import os
 import sys
@@ -124,7 +122,7 @@ class ListenerThread(SoundSubmissiveDeamon):
         }[self._status]()
         self._check_timeout()
 
-    def _check_timeout():
+    def _check_timeout(self):
         '''
         Checks this thread has been processing some significant data lately,
         otherwise terminates it

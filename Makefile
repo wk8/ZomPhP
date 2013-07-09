@@ -1,16 +1,17 @@
 LCK_FILE := /tmp/zomphp.pid
 INSTALL_DIR := /usr/lib/zomphp
-
-ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+VENV_DIR_NAME := venv
 
 ULIMIT_FILES := 64000
 
+ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
-.PHONY: check_git check_root clean install install_daemon remove_dir restart start status stop uninstall status
 
-.SILENT: check_root status check_git
+.PHONY: check_dependencies check_root check_venv clean install install_daemon remove_dir restart start status stop uninstall status
 
-install: check_root check_git install_daemon
+.SILENT: check_dependencies check_root status
+
+install: check_root check_dependencies install_daemon
 	@echo "Installing daemonize..."
 	$(ROOT_DIR)/bin/install_daemonize.sh
 	@echo "Installing xdebug..."
@@ -28,6 +29,16 @@ install_daemon: check_root
 	mkdir -p /etc/zomphp
 	touch /etc/zomphp/__init__.py
 	/bin/bash -c "[ -a '/etc/zomphp/settings.py' ] || cp $(INSTALL_DIR)/daemon/settings.py.tpl /etc/zomphp/settings.py"
+	# Install virtualenv
+	@make VENV_DIR_LOC=$(INSTALL_DIR) check_venv
+
+# installs the venv if needed, otherwise does nothing
+check_venv:
+ifndef VENV_DIR_LOC
+	$(eval VENV_DIR_LOC := $(ROOT_DIR))
+endif
+	$(eval VENV_DIR := $(VENV_DIR_LOC)/$(VENV_DIR_NAME))
+	@/bin/bash -c "[ -d $(VENV_DIR) ] || eval 'echo \"Creating the virtualenv in $(VENV_DIR) and installing the requirements\" && virtualenv $(VENV_DIR) --no-site-packages && echo \"$(VENV_DIR)/bin/pip install --upgrade -r $(ROOT_DIR)/requirements.txt\"'"
 
 uninstall: check_root
 	@echo "Uninstalling ZomPHP..."
@@ -38,11 +49,11 @@ uninstall: check_root
 remove_dir:
 	rm -rf $(INSTALL_DIR)
 
-start: check_root
+start: check_root check_venv
 	@echo "Starting ZomPHP!"
 	$(eval OWNER := $(shell $(ROOT_DIR)/daemon/zomphp.py --get-owner))
-	# increase the ulimit for that user and start the whole thing!
-	ulimit -n $(ULIMIT_FILES) $(OWNER) && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py
+	# Increase the ulimit for that user and start the venv, then the daemon itself
+	@/bin/bash -c "eval 'ulimit -n $(ULIMIT_FILES) $(OWNER) || echo \"WARNING: unable to set the ulimit!\"' && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py"
 
 stop: check_root
 	@echo "Stopping ZomPHP!"
@@ -57,8 +68,12 @@ status: check_root
 check_root:
 	@/bin/bash -c "[[ `whoami` == 'root' ]] || eval 'echo \"You need to be root to run this script\" && exit 1'"
 
-check_git:
+check_dependencies:
 	@/bin/bash -c "which git &> /dev/null || eval 'echo \"You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)\" && exit 1'"
+	@/bin/bash -c "which virtualenv &> /dev/null || eval 'echo \"You need to install virtualenv! (http://www.virtualenv.org)\" && exit 1'"
 
 clean:
 	find . -type f -name "*.pyc" -print0 -exec rm -f {} \;
+
+clean_sockets: stop
+	rm -f /tmp/zomphp*
