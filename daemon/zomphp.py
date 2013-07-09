@@ -38,6 +38,10 @@ class ListenerThread(SoundSubmissiveDeamon):
     # the separator between two items
     ITEM_SEPARATOR = '\n'
 
+    # if a listener thread has received no meaningful data in that many seconds, it kills itself
+    # sub-classes can override this to 0 to say a thread should never timeout
+    MAX_IDLE_SPAN = 600 # 10 minutes
+
     def __init__(self, controller, thread_id, max_connections=socket.SOMAXCONN):
         '''
         `max_connections` is the max # of connections allowed on the socket
@@ -50,6 +54,7 @@ class ListenerThread(SoundSubmissiveDeamon):
         self._current_connection = None
         # the ongoing received data (might be distributed across several received)
         self._current_received_string = ''
+        self._last_significant_item = datetime.datetime.now()
 
     @staticmethod
     def get_socket_path_from_id(thread_id):
@@ -108,6 +113,7 @@ class ListenerThread(SoundSubmissiveDeamon):
         for new_item in new_items_raw.split(self.ITEM_SEPARATOR):
             if new_item:
                 logging.debug('Listener %s processing new data: %s' % (self.displayable_name, new_item))
+                self._last_significant_item = datetime.datetime.now()
                 self.process_item(new_item)
 
     def do_work(self):
@@ -116,6 +122,20 @@ class ListenerThread(SoundSubmissiveDeamon):
             self.STATUS.LISTENING: lambda: self._accept_connection(),
             self.STATUS.RECEIVING: lambda: self._receive_data()
         }[self._status]()
+        self._check_timeout()
+
+    def _check_timeout():
+        '''
+        Checks this thread has been processing some significant data lately,
+        otherwise terminates it
+        '''
+        if self.MAX_IDLE_SPAN <= 0:
+            # means that class of thread should never time out
+            return
+        seconds_idle = (datetime.datetime.now() - self._last_significant_item).total_seconds()
+        if seconds_idle >= self.MAX_IDLE_SPAN:
+            logging.info('Listener %s has been idle for too long (%s seconds VS %d max allowed), shutting down' % (self.displayable_name, seconds_idle, self.MAX_IDLE_SPAN))
+            self.work_done()
 
     def _delete_socket_file(self):
         '''
@@ -155,9 +175,11 @@ class IncomingRequestsListener(ListenerThread):
     and creates the relevant listener threads
     '''
 
+    # those listener threads should never time out
+    MAX_IDLE_SPAN = 0
+
     IN_LISTENER_ID = 'in'
     IN_CLI_LISTENER_ID = 'in_cli'
-    OUT_LISTENER_ID = 'out'
 
     def process_item(self, item):
         new_thread = Worker(self._controller, int(item))
@@ -168,6 +190,11 @@ class OutgoingRequestsListener(ListenerThread):
     '''
     Listens to PHP processes signing out (basically, when the SAPI dies)
     '''
+
+    # shouldn't time out either
+    MAX_IDLE_SPAN = 0
+
+    OUT_LISTENER_ID = 'out'
 
     def process_item(self, item):
         self._controller.notify_completion(int(item))
@@ -211,7 +238,7 @@ class ZomPHPThreadController(KillerDaddy):
         self.cleanup()
         # add the listener threads according the configuration
         self.sumbit_new_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_LISTENER_ID))
-        self.sumbit_new_thread(OutgoingRequestsListener(self, IncomingRequestsListener.OUT_LISTENER_ID))
+        self.sumbit_new_thread(OutgoingRequestsListener(self, OutgoingRequestsListener.OUT_LISTENER_ID))
         if ENABLE_FOR_CLI:
             self.sumbit_new_thread(IncomingRequestsListener(self, IncomingRequestsListener.IN_CLI_LISTENER_ID))
         # and the pinger thread

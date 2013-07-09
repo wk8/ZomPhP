@@ -24,7 +24,7 @@ def set_logger():
     # logger.handlers = [] TODO wkpo
     if LOG_FILE:
         # otherwise nothing else to do
-        log_level = getattr(logging, LOG_LEVEL, logging.WARNING)
+        log_level = getattr(logging, LOG_LEVEL, logging.INFO)
         logging.basicConfig(level=log_level)
         format = '[%(asctime)s]%(levelname)s:PID %(process)s:Thread %(threadName)s: %(message)s'
         formatter = logging.Formatter(fmt=format)

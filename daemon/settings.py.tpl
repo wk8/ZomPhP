@@ -23,7 +23,7 @@ BACKEND_KWARGS = {}
 
 # logging options
 LOG_FILE = '/var/log/zomphp.log' # the daemon's owner must obviously have the right to write in there
-LOG_LEVEL = 'WARNING' # one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', otherwise defaults to 'WARNING'
+LOG_LEVEL = 'DEBUG' # one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL', otherwise defaults to 'INFO'
 
 
 # the user to run ZomPHP's daemon as
