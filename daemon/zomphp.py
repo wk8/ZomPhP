@@ -263,7 +263,6 @@ class ZomPHPApp(object):
         self._last_run_date = datetime.datetime.now()
 
     def run(self):
-        self._check_ulimit()
         try:
             while True:
                 self._last_run_date = datetime.datetime.now()
@@ -301,11 +300,6 @@ class ZomPHPApp(object):
             time.sleep(diff)
         else:
             logging.debug('Didn\'t have to sleep! (took %s s more)' % -diff)
-
-    def _check_ulimit():
-        '''
-        Checks the current user has the right to have a somewhat large 
-        '''
 
 
 def main():
