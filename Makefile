@@ -3,6 +3,8 @@ INSTALL_DIR := /usr/lib/zomphp
 
 ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
+ULIMIT_FILES := 64000
+
 
 .PHONY: check_git check_root clean install install_daemon remove_dir restart start status stop uninstall status
 
@@ -27,8 +29,7 @@ install_daemon: check_root
 	touch /etc/zomphp/__init__.py
 	/bin/bash -c "[ -a '/etc/zomphp/settings.py' ] || cp $(INSTALL_DIR)/daemon/settings.py.tpl /etc/zomphp/settings.py"
 
-
-uninstall:
+uninstall: check_root
 	@echo "Uninstalling ZomPHP..."
 	@make remove_dir
 	rm -f /etc/init.d/zomphp
@@ -40,7 +41,8 @@ remove_dir:
 start: check_root
 	@echo "Starting ZomPHP!"
 	$(eval OWNER := $(shell $(ROOT_DIR)/daemon/zomphp.py --get-owner))
-	daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py
+	# increase the ulimit for that user and start the whole thing!
+	ulimit -n $(ULIMIT_FILES) $(OWNER) && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py
 
 stop: check_root
 	@echo "Stopping ZomPHP!"
