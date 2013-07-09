@@ -53,7 +53,7 @@ start: check_root check_venv
 	@echo "Starting ZomPHP!"
 	$(eval OWNER := $(shell $(ROOT_DIR)/daemon/zomphp.py --get-owner))
 	# Increase the ulimit for that user and start the venv, then the daemon itself
-	@/bin/bash -c "eval 'ulimit -n $(ULIMIT_FILES) $(OWNER) || echo \"WARNING: unable to set the ulimit!\"' && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py"
+	/bin/bash -c "eval 'ulimit -n $(ULIMIT_FILES) $(OWNER) || echo \"WARNING: unable to set the ulimit!\"' && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py"
 
 stop: check_root
 	@echo "Stopping ZomPHP!"
