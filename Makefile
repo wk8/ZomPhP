@@ -9,7 +9,7 @@ ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 .PHONY: check_dependencies check_root check_venv clean install install_daemon remove_dir restart start status stop uninstall status
 
-.SILENT: check_dependencies check_root status
+.SILENT: check_dependencies check_root start status stop
 
 install: check_root check_dependencies install_daemon
 	@echo "Installing daemonize..."
@@ -50,27 +50,27 @@ remove_dir:
 	rm -rf $(INSTALL_DIR)
 
 start: check_root check_venv
-	@echo "Starting ZomPHP!"
+	echo "Starting ZomPHP!"
 	$(eval OWNER := $(shell $(ROOT_DIR)/daemon/zomphp.py --get-owner))
 	# Increase the ulimit for that user and start the venv, then the daemon itself
-	@/bin/bash -c "eval 'ulimit -n $(ULIMIT_FILES) $(OWNER) || echo \"WARNING: unable to set the ulimit\"' && COMMAND=\"source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py\" && echo $$COMMAND && $$COMMAND"
+	/bin/bash -c "eval 'ulimit -n $(ULIMIT_FILES) $(OWNER) || echo \"WARNING: unable to set the ulimit\"' && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py"
 
 stop: check_root
-	@echo "Stopping ZomPHP!"
+	echo "Stopping ZomPHP!"
 	/bin/bash -c "make status &> /dev/null || eval 'echo \"ZomPHP is not running\" && exit 1'"
 	kill `cat $(LCK_FILE)` # FIXME: graceful stop
 
 restart: stop start
 
 status: check_root
-	@/bin/bash -c "ps -p `/bin/bash -c '[ -a $(LCK_FILE) ] && cat $(LCK_FILE) || echo 1'` -o command= | grep zomphp.py > /dev/null && echo \"ZomPHP appears to be running\" || eval 'echo \"ZomPHP is not running\" && exit 1'"
+	/bin/bash -c "ps -p `/bin/bash -c '[ -a $(LCK_FILE) ] && cat $(LCK_FILE) || echo 1'` -o command= | grep zomphp.py > /dev/null && echo \"ZomPHP appears to be running\" || eval 'echo \"ZomPHP is not running\" && exit 1'"
 
 check_root:
-	@/bin/bash -c "[[ `whoami` == 'root' ]] || eval 'echo \"You need to be root to run this script\" && exit 1'"
+	/bin/bash -c "[[ `whoami` == 'root' ]] || eval 'echo \"You need to be root to run this script\" && exit 1'"
 
 check_dependencies:
-	@/bin/bash -c "which git &> /dev/null || eval 'echo \"You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)\" && exit 1'"
-	@/bin/bash -c "which virtualenv &> /dev/null || eval 'echo \"You need to install virtualenv! (http://www.virtualenv.org)\" && exit 1'"
+	/bin/bash -c "which git &> /dev/null || eval 'echo \"You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)\" && exit 1'"
+	/bin/bash -c "which virtualenv &> /dev/null || eval 'echo \"You need to install virtualenv! (http://www.virtualenv.org)\" && exit 1'"
 
 clean:
 	find . -type f -name "*.pyc" -print0 -exec rm -f {} \;
