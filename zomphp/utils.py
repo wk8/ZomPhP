@@ -5,7 +5,7 @@ import sys
 import threading
 import traceback
 
-from settings import LOG_FILE, LOG_LEVEL
+from zomphp_settings import LOG_FILE, LOG_LEVEL
 
 
 def enum(*enums):

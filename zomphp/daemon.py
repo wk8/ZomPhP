@@ -11,12 +11,12 @@ import datetime
 import logging
 import argparse
 
-if os.path.exists('/etc/zomphp/settings.py'):
+if os.path.exists('/etc/zomphp/zomphp_settings.py'):
     sys.path.append('/etc/zomphp')
 
 from threads import SoundSubmissiveDeamon, KillerDaddy
 from utils import enum, set_logger
-from settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI, ZOMPHP_DEAMON_OWNER
+from zomphp_settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI, ZOMPHP_DEAMON_OWNER
 from constants import SOCKET_PATH_PREFIX
 import backend
 

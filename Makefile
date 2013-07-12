@@ -23,12 +23,12 @@ install_daemon: check_root
 	git clone https://github.com/wk8/ZomPhP.git $(INSTALL_DIR)
 	# Install the init.d script
 	$(eval ESCAPED_INSTALL_DIR := $(shell echo $(INSTALL_DIR) | sed 's/\//\\\//g'))
-	sed 's/<INSTALL_DIR>/$(ESCAPED_INSTALL_DIR)/g' $(INSTALL_DIR)/daemon/zomphp.init.d > /etc/init.d/zomphp
+	sed 's/<INSTALL_DIR>/$(ESCAPED_INSTALL_DIR)/g' $(INSTALL_DIR)/zomphp/zomphp.init.d > /etc/init.d/zomphp
 	chmod +x /etc/init.d/zomphp
 	# Create the settings folder
 	mkdir -p /etc/zomphp
 	touch /etc/zomphp/__init__.py
-	/bin/bash -c "[ -a '/etc/zomphp/settings.py' ] || cp $(INSTALL_DIR)/daemon/settings.py.tpl /etc/zomphp/settings.py"
+	/bin/bash -c "[ -a '/etc/zomphp/zomphp_settings.py' ] || cp $(INSTALL_DIR)/zomphp/zomphp_settings.py.tpl /etc/zomphp/zomphp_settings.py"
 	# Install virtualenv
 	@make VENV_DIR_LOC=$(INSTALL_DIR) check_venv
 
@@ -51,9 +51,9 @@ remove_dir:
 
 start: check_root check_venv
 	echo "Starting ZomPHP!"
-	$(eval OWNER := $(shell $(ROOT_DIR)/daemon/zomphp.py --get-owner))
+	$(eval OWNER := $(shell $(ROOT_DIR)/zomphp/daemon.py --get-owner))
 	# Increase the ulimit for that user and start the venv, then the daemon itself
-	/bin/bash -c "eval 'ulimit -n $(ULIMIT_FILES) $(OWNER) || echo \"WARNING: unable to set the ulimit\"' && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/daemon/zomphp.py"
+	/bin/bash -c "eval 'ulimit -n $(ULIMIT_FILES) $(OWNER) || echo \"WARNING: unable to set the ulimit\"' && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/zomphp/daemon.py"
 
 stop: check_root
 	/bin/bash -c "make status &> /dev/null || eval 'echo \"ZomPHP is not running\" && exit 1'"
@@ -63,7 +63,7 @@ stop: check_root
 restart: stop start
 
 status: check_root
-	/bin/bash -c "ps -p `/bin/bash -c '[ -a $(LCK_FILE) ] && cat $(LCK_FILE) || echo 1'` -o command= | grep zomphp.py > /dev/null && echo \"ZomPHP appears to be running\" || eval 'echo \"ZomPHP is not running\" && exit 1'"
+	/bin/bash -c "ps -p `/bin/bash -c '[ -a $(LCK_FILE) ] && cat $(LCK_FILE) || echo 1'` -o command= | grep "zomphp/daemon.py" > /dev/null && echo \"ZomPHP appears to be running\" || eval 'echo \"ZomPHP is not running\" && exit 1'"
 
 check_root:
 	/bin/bash -c "[[ `whoami` == 'root' ]] || eval 'echo \"You need to be root to run this script\" && exit 1'"
