@@ -82,7 +82,7 @@ status: check_root
 # Git Subtree Management #
 ##########################
 
-SUBTREE_ARGS = --prefix=vendor/pywork4core --squash pywork4core master
+SUBTREE_ARGS := --prefix=lib/vendor/PHP-Parser --squash PHP-Parser master
 git_subtree_pull:
 	@make _git_subtree GIT_SUBTREE_ACTION=pull
 

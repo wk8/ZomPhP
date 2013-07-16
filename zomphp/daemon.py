@@ -16,9 +16,9 @@ if os.path.exists('/etc/zomphp/zomphp_settings.py'):
 
 from threads import SoundSubmissiveDeamon, KillerDaddy
 from utils import enum, set_logger
-from zomphp_settings import BACKEND_CLASS_NAME, BACKEND_KWARGS, ENABLE_FOR_CLI, ZOMPHP_DEAMON_OWNER
+from zomphp_settings import ENABLE_FOR_CLI, ZOMPHP_DEAMON_OWNER
 from constants import SOCKET_PATH_PREFIX
-import backend
+from backend import get_new_backend
 
 
 
@@ -65,7 +65,7 @@ class ListenerThread(SoundSubmissiveDeamon):
         '''
         raise NotImplementedError
 
-    def _connect_to_socket(self):
+    def _init_thread(self):
         '''
         Connects to the socket
         '''
@@ -116,7 +116,7 @@ class ListenerThread(SoundSubmissiveDeamon):
 
     def do_work(self):
         {
-            self.STATUS.NOT_STARTED: lambda: self._connect_to_socket(),
+            self.STATUS.NOT_STARTED: lambda: self._init_thread(),
             self.STATUS.LISTENING: lambda: self._accept_connection(),
             self.STATUS.RECEIVING: lambda: self._receive_data()
         }[self._status]()
@@ -157,14 +157,14 @@ class Worker(ListenerThread):
     The main type of thread: in charge of getting the data from PHP processes and pushing it to the backend
     '''
 
-    def __init__(self, *args, **kwargs):
-        super(Worker, self).__init__(*args, **kwargs)
-        # build the backend
-        self._backend = getattr(backend, BACKEND_CLASS_NAME)(**BACKEND_KWARGS)
-
     def process_item(self, item):
         # just push to the backend
-        self._backend.record(item)
+        self._backend.process_raw_data(item)
+
+    def _init_thread(self):
+        # we need to init the backend on top of opening the socket
+        super(Worker, self)._init_thread()
+        self._backend = get_new_backend()
 
 
 class IncomingRequestsListener(ListenerThread):
