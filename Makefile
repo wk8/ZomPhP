@@ -11,6 +11,10 @@ ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 .SILENT: check_dependencies check_root check_venv start status stop
 
+###########
+# Install #
+###########
+
 install: check_root check_dependencies install_daemon
 	@echo "Installing daemonize..."
 	$(ROOT_DIR)/bin/install_daemonize.sh
@@ -49,6 +53,15 @@ uninstall: check_root
 remove_dir:
 	rm -rf $(INSTALL_DIR)
 
+check_dependencies:
+	/bin/bash -c "which git &> /dev/null || eval 'echo \"You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)\" && exit 1'"
+	/bin/bash -c "which virtualenv &> /dev/null || eval 'echo \"You need to install virtualenv! (http://www.virtualenv.org)\" && exit 1'"
+
+
+#####################
+# Daemon management #
+#####################
+
 start: check_root check_venv
 	echo "Starting ZomPHP!"
 	$(eval OWNER := $(shell $(ROOT_DIR)/zomphp/daemon.py --get-owner))
@@ -65,12 +78,27 @@ restart: stop start
 status: check_root
 	/bin/bash -c "ps -p `/bin/bash -c '[ -a $(LCK_FILE) ] && cat $(LCK_FILE) || echo 1'` -o command= | grep "zomphp/daemon.py" > /dev/null && echo \"ZomPHP appears to be running\" || eval 'echo \"ZomPHP is not running\" && exit 1'"
 
+##########################
+# Git Subtree Management #
+##########################
+
+SUBTREE_ARGS = --prefix=vendor/pywork4core --squash pywork4core master
+git_subtree_pull:
+	@make _git_subtree GIT_SUBTREE_ACTION=pull
+
+git_subtree_push:
+	@make _git_subtree GIT_SUBTREE_ACTION=push
+
+_git_subtree:
+	git subtree ${GIT_SUBTREE_ACTION} ${SUBTREE_ARGS}
+
+
+###########
+# Helpers #
+###########
+
 check_root:
 	/bin/bash -c "[[ `whoami` == 'root' ]] || eval 'echo \"You need to be root to run this script\" && exit 1'"
-
-check_dependencies:
-	/bin/bash -c "which git &> /dev/null || eval 'echo \"You need to install git! (http://git-scm.com/book/en/Getting-Started-Installing-Git)\" && exit 1'"
-	/bin/bash -c "which virtualenv &> /dev/null || eval 'echo \"You need to install virtualenv! (http://www.virtualenv.org)\" && exit 1'"
 
 clean:
 	find . -type f -name "*.pyc" -print0 -exec rm -f {} \;
