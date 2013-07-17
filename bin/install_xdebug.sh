@@ -6,7 +6,6 @@ cd /tmp \
 && rm -rf xdebug \
 && git clone https://github.com/wk8/xdebug.git \
 && cd xdebug \
-&& git checkout zomphp \
 && git pull \
 && ./install_full.sh \
 || exit $?
