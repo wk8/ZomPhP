@@ -10,7 +10,7 @@ BACKEND_CLASS_NAME = 'MongoBackend'
 BACKEND_KWARGS = {
     'db_name': 'jrouge_logs',
     'col_name': 'wk',
-    'size': 20000,
+    'size': 45000,
     'host': 'dev-mongodb-01.local'
 }
 

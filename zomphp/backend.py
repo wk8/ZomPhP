@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import sys
+import os
+import subprocess
+import json
 
 import pymongo
 
@@ -47,6 +51,27 @@ class BaseBackend(object):
         data, _, lineno = data.rpartition(':')
         filename, _, function = data.rpartition(':')
         self.record(filename, function, lineno)
+
+    def process_file(self, path):
+        '''
+        Parses a file and marks the unused functions as such!
+        '''
+        file_functions = self.get_file_functions(path)
+        print file_functions
+
+    @staticmethod
+    def get_file_functions(path):
+        '''
+        Returns the result from lib/extract_functions.php
+        '''
+        # ugly, but eh...
+        extract_exec = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib', 'extract_functions.php')
+        try:
+            data = subprocess.check_output('%s %s' % (extract_exec, path), shell=True)
+            return json.loads(data)
+        except subprocess.CalledProcessError as ex:
+            logging.error('Failed to extract functions from %s: %s' % (path, ex.output))
+            return {}
 
 
 class DummyBackend(BaseBackend):
@@ -126,9 +151,9 @@ class MongoBackend(BaseBackend):
         Ensures we have the right indexes on the coll
         '''
         # the main index, also OK for likely_belongs
-        self._mongo_col.ensure_index([self._FILENAME_KEY, self._FUNCTION_KEY, self._LINENO_KEY], name='main_index', unique=True, dropDups=True)
+        self._mongo_col.ensure_index([(key, pymongo.ASCENDING) for key in (self._FILENAME_KEY, self._FUNCTION_KEY, self._LINENO_KEY)], name='main_index', unique=True, dropDups=True)
         # the index used for next_func
-        self._mongo_col.ensure_index([self._FILENAME_KEY, self._LINENO_KEY, self._FUNCTION_KEY], name='next_func_index'])
+        self._mongo_col.ensure_index([(key, pymongo.ASCENDING) for key in (self._FILENAME_KEY, self._LINENO_KEY, self._FUNCTION_KEY)], name='next_func_index')
 
     def record(self, filename, function, lineno):
         doc = {self._FILENAME_KEY: filename, self._FUNCTION_KEY: function, self._LINENO_KEY: lineno}
@@ -151,3 +176,10 @@ def get_new_backend():
     Returns a new backend object, according to the settings
     '''
     return eval(BACKEND_CLASS_NAME)(**BACKEND_KWARGS)
+
+
+if __name__ == '__main__': # TODO wkpo
+    logging.basicConfig(level=logging.DEBUG)
+    f = '/home/jrouge/Dropbox/work4us/web/wk/wk.php'
+    b = get_new_backend()
+    b.process_file(f)
