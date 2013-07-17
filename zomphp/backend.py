@@ -38,7 +38,7 @@ class BaseBackend(object):
 
     # DON'T OVERRIDE THE REMAINING FUNCTIONS
 
-    def test_function(self, filename, function, lineno):
+    def function_called(self, filename, function, lineno):
         '''
         Returns True iff that function has been called
         '''
@@ -56,8 +56,37 @@ class BaseBackend(object):
         '''
         Parses a file and marks the unused functions as such!
         '''
+        logging.debug('Processing file %s' % path)
         file_functions = self.get_file_functions(path)
-        print file_functions
+        logging.debug('Found functions %s' % file_functions)
+        if not file_functions:
+            # nothing to do
+            return
+
+        current_line_nb = 0
+        new_content = ''
+        with open(path, 'r') as source:
+            while True:
+                current_line = source.readline()
+                current_line_nb += 1
+                if not current_line:
+                    # we're done
+                    break
+                for function in file_functions.get(str(current_line_nb), []):
+                    if self.function_called(path, function, current_line_nb):
+                        logging.debug('Function %s:%s:%d appears to be used' % (path, function, current_line_nb))
+                    else:
+                        logging.debug('Flagging %s:%s:%d as not used!' % (path, function, current_line_nb))
+                        new_content += self.generate_warning(function) + '\n'
+                new_content += current_line
+
+        # let's replace the old file with the new content
+        with open(path, 'w') as new_file:
+            new_file.write(new_content)
+
+    @staticmethod
+    def generate_warning(function): # TODO wkpo date! et tout ca
+        return '// ZomPHP warning : the function %s seems be be unused' % function
 
     @staticmethod
     def get_file_functions(path):
@@ -67,7 +96,7 @@ class BaseBackend(object):
         # ugly, but eh...
         extract_exec = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib', 'extract_functions.php')
         try:
-            data = subprocess.check_output('%s %s' % (extract_exec, path), shell=True)
+            data = subprocess.check_output('%s "%s"' % (extract_exec, path), shell=True)
             return json.loads(data)
         except subprocess.CalledProcessError as ex:
             logging.error('Failed to extract functions from %s: %s' % (path, ex.output))

@@ -1,3 +1,3 @@
 *.py[cod]
-daemon/zomphp_settings.py
+zomphp/zomphp_settings.py
 venv/
