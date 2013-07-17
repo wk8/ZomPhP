@@ -56,6 +56,8 @@ class BaseBackend(object):
         '''
         Parses a file and marks the unused functions as such!
         '''
+        # PHP always unrolls symlinks, at least something it does right :-)
+        path = os.path.realpath(path)
         logging.debug('Processing file %s' % path)
         file_functions = self.get_file_functions(path)
         logging.debug('Found functions %s' % file_functions)
@@ -209,9 +211,11 @@ def get_new_backend():
 
 if __name__ == '__main__': # TODO wkpo
     logging.basicConfig(level=logging.DEBUG)
-    f = '/home/jrouge/Dropbox/work4us/web/wk/wk.php'
     b = get_new_backend()
-    print b.function_called(f, 'b', 40)
-    print b.likely_belongs(f, 'b')
-    print b.next_func(f, 40)
-    # b.process_file(f)
+    
+    f = '/home/jrouge/Dropbox/work4us/web/wk/wk.php'
+    # f = os.path.realpath(f)
+    # print b.function_called(f, 'b', 40)
+    # print b.likely_belongs(f, 'b')
+    # print b.next_func(f, 40)
+    b.process_file(f)
