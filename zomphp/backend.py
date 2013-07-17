@@ -185,7 +185,7 @@ class MongoBackend(BaseBackend):
         self._mongo_col.ensure_index([(key, pymongo.ASCENDING) for key in (self._FILENAME_KEY, self._LINENO_KEY, self._FUNCTION_KEY)], name='next_func_index')
 
     def record(self, filename, function, lineno):
-        doc = {self._FILENAME_KEY: filename, self._FUNCTION_KEY: function, self._LINENO_KEY: lineno}
+        doc = {self._FILENAME_KEY: filename, self._FUNCTION_KEY: function, self._LINENO_KEY: int(lineno)}
         self._mongo_col.update(doc, doc, upsert=True, manipulate=False, w=0, check_keys=False)
 
     def likely_belongs(self, filename, function):
@@ -211,4 +211,7 @@ if __name__ == '__main__': # TODO wkpo
     logging.basicConfig(level=logging.DEBUG)
     f = '/home/jrouge/Dropbox/work4us/web/wk/wk.php'
     b = get_new_backend()
-    b.process_file(f)
+    print b.function_called(f, 'b', 40)
+    print b.likely_belongs(f, 'b')
+    print b.next_func(f, 40)
+    # b.process_file(f)
