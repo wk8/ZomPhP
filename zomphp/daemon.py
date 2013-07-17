@@ -28,7 +28,7 @@ class ListenerThread(SoundSubmissiveDeamon):
 
     STATUS = enum('NOT_STARTED', 'LISTENING', 'RECEIVING')
 
-    # sub-classes can change that, but no reason too IMHO
+    # sub-classes can change that, but no reason to IMHO
     # and from the doc : "For best match with hardware and network realities, the value of bufsize should be a relatively small power of 2"
     RCV_CHUNK_SIZE = 1024
 
