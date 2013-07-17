@@ -5,6 +5,7 @@ import sys
 import os
 import subprocess
 import json
+import datetime
 
 import pymongo
 
@@ -115,8 +116,8 @@ class BaseBackend(object):
                 self.process_file(abs_path, strict)
 
     @staticmethod
-    def _generate_warning(function): # TODO wkpo date! et tout ca
-        return '// ZomPHP warning : the function %s seems be be unused' % function
+    def _generate_warning(function):
+        return '// ZomPHP warning : the function %s seems be be unused (%s)' % (function, datetime.datetime.now())
 
     @staticmethod
     def _get_file_functions(path):
@@ -235,18 +236,3 @@ def get_new_backend():
     Returns a new backend object, according to the settings
     '''
     return eval(BACKEND_CLASS_NAME)(**BACKEND_KWARGS)
-
-
-if __name__ == '__main__': # TODO wkpo
-    logging.basicConfig(level=logging.DEBUG)
-    b = get_new_backend()
-    
-    # f = '/home/jrouge/Dropbox/work4us/web/wk/wk.php'
-    # f = os.path.realpath(f)
-    # print b.function_called(f, 'b', 40)
-    # print b.likely_belongs(f, 'b')
-    # print b.next_func(f, 40)
-    # b.process_file(f)
-    
-    d = '/home/jrouge/Dropbox/work4us'
-    b.process_directory(d)

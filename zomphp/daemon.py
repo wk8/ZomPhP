@@ -328,9 +328,7 @@ class ZomPHPApp(object):
 
 def main():
     # argument processing
-    parser = argparse.ArgumentParser(
-        description='Detect your PHP dead code'
-    )
+    parser = argparse.ArgumentParser(description='Detect your PHP dead code')
     parser.add_argument('--get-owner', dest='get_owner', action='store_const',
                         const=True, default=False, help='Outputs the deamon\'s owner'
                         ' as set in the configuration, then exits')

@@ -19,9 +19,7 @@ def set_logger():
     '''
     Sets the right logger
     '''
-    # TODO wkpo rights? plus no loggin to console
     logger = logging.getLogger()
-    # logger.handlers = [] TODO wkpo
     if LOG_FILE:
         # otherwise nothing else to do
         log_level = getattr(logging, LOG_LEVEL, logging.INFO)
