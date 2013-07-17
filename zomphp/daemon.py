@@ -21,7 +21,6 @@ from constants import SOCKET_PATH_PREFIX
 from backend import get_new_backend
 
 
-
 class ListenerThread(SoundSubmissiveDeamon):
     '''
     A generic class for listener threads
@@ -38,7 +37,7 @@ class ListenerThread(SoundSubmissiveDeamon):
 
     # if a listener thread has received no meaningful data in that many seconds, it kills itself
     # sub-classes can override this to 0 to say a thread should never timeout
-    MAX_IDLE_SPAN = 600 # 10 minutes
+    MAX_IDLE_SPAN = 600  # 10 minutes
 
     def __init__(self, controller, thread_id, max_connections=socket.SOMAXCONN):
         '''
