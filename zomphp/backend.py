@@ -38,11 +38,14 @@ class BaseBackend(object):
 
     # DON'T OVERRIDE THE REMAINING FUNCTIONS
 
-    def function_called(self, filename, function, lineno):
+    def _function_called(self, filename, function, lineno, strict=False):
         '''
-        Returns True iff that function has been called
+        Returns True if that function has been called
         '''
-        return self.likely_belongs(filename, function) and self.next_func(filename, lineno) == function
+        if strict:
+            return self.next_func(filename, lineno) == function
+        else:
+            return self.likely_belongs(filename, function)
 
     def process_raw_data(self, data):
         '''
@@ -52,14 +55,16 @@ class BaseBackend(object):
         filename, _, function = data.rpartition(':')
         self.record(filename, function, lineno)
 
-    def process_file(self, path):
+    def process_file(self, path, strict=False):
         '''
         Parses a file and marks the unused functions as such!
+        `strict` might find more false negatives, but less false positives
+        Returns the real path of the file on success
         '''
         # PHP always unrolls symlinks, at least something it does right :-)
         path = os.path.realpath(path)
-        logging.debug('Processing file %s' % path)
-        file_functions = self.get_file_functions(path)
+        logging.info('Processing file %s' % path)
+        file_functions = self._get_file_functions(path)
         logging.debug('Found functions %s' % file_functions)
         if not file_functions:
             # nothing to do
@@ -74,24 +79,47 @@ class BaseBackend(object):
                 if not current_line:
                     # we're done
                     break
-                for function in file_functions.get(str(current_line_nb), []):
-                    if self.function_called(path, function, current_line_nb):
+                for function in file_functions.get(current_line_nb, []):
+                    if self._function_called(path, function, current_line_nb, strict):
                         logging.debug('Function %s:%s:%d appears to be used' % (path, function, current_line_nb))
                     else:
                         logging.debug('Flagging %s:%s:%d as not used!' % (path, function, current_line_nb))
-                        new_content += self.generate_warning(function) + '\n'
+                        new_content += self._generate_warning(function) + '\n'
                 new_content += current_line
 
         # let's replace the old file with the new content
         with open(path, 'w') as new_file:
             new_file.write(new_content)
 
+        return path
+
+    def _should_process_file(self, filename):
+        '''
+        Should return True iff we want to process that file
+        Current policy: we process only *.php files
+        '''
+        return filename.endswith('.php')
+
+    def process_directory(self, directory_path, strict=False):
+        for root, _, files in os.walk(directory_path):
+            for rel_path in files:
+                if not self._should_process_file(rel_path):
+                    logging.debug('Ignoring %s file' % rel_path)
+                    continue
+
+                abs_path = os.path.join(root, rel_path)
+                real_path = os.path.realpath(abs_path)
+                if real_path != abs_path:
+                    logging.debug('Ignoring symlinked file %s, will be processed as %s' % (abs_path, real_path))
+
+                self.process_file(abs_path, strict)
+
     @staticmethod
-    def generate_warning(function): # TODO wkpo date! et tout ca
+    def _generate_warning(function): # TODO wkpo date! et tout ca
         return '// ZomPHP warning : the function %s seems be be unused' % function
 
     @staticmethod
-    def get_file_functions(path):
+    def _get_file_functions(path):
         '''
         Returns the result from lib/extract_functions.php
         '''
@@ -99,7 +127,7 @@ class BaseBackend(object):
         extract_exec = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib', 'extract_functions.php')
         try:
             data = subprocess.check_output('%s "%s"' % (extract_exec, path), shell=True)
-            return json.loads(data)
+            return {int(k): v for k, v in json.loads(data).items()}
         except subprocess.CalledProcessError as ex:
             logging.error('Failed to extract functions from %s: %s' % (path, ex.output))
             return {}
@@ -213,9 +241,12 @@ if __name__ == '__main__': # TODO wkpo
     logging.basicConfig(level=logging.DEBUG)
     b = get_new_backend()
     
-    f = '/home/jrouge/Dropbox/work4us/web/wk/wk.php'
+    # f = '/home/jrouge/Dropbox/work4us/web/wk/wk.php'
     # f = os.path.realpath(f)
     # print b.function_called(f, 'b', 40)
     # print b.likely_belongs(f, 'b')
     # print b.next_func(f, 40)
-    b.process_file(f)
+    # b.process_file(f)
+    
+    d = '/home/jrouge/Dropbox/work4us'
+    b.process_directory(d)
