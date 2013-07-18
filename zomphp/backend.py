@@ -39,7 +39,7 @@ class BaseBackend(object):
 
     # DON'T OVERRIDE THE REMAINING FUNCTIONS
 
-    def _function_called(self, filename, function, lineno, strict=False, translator=translator):
+    def _function_called(self, filename, function, lineno, strict=False, translator=None):
         '''
         Returns True if that function has been called
         '''
