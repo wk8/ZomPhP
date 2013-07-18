@@ -39,7 +39,13 @@ def main():
                         default=[], help='A list of couples of paths to '
                         'translate (useful if running the code in a different '
                         'location than the one running the PHP code)')
+    parser.add_argument('--logging-level', dest='logging_level', metavar='level',
+                        type=str, nargs=1, default=None, help='A logging '
+                        'level to override the one set in the settings file')
     args = parser.parse_args()
+
+    # start the logger
+    utils.set_logger()
 
     # some sanity checks
     def check_abs_path(path, option_name):
@@ -68,7 +74,7 @@ def main():
     bckend = backend.get_new_backend()
 
     if args.dir:
-        bckend.process_directory(args.dir, strict=args.strict, ignore_sub_dirs=args.ignore_sub_dirs, translator=translator)
+        bckend.process_directory(args.dir[0], strict=args.strict, ignore_sub_dirs=args.ignore_sub_dirs, translator=translator)
     else:
         # then it must be --files
         for fle in args.files:

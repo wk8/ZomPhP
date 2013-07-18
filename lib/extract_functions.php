@@ -70,4 +70,6 @@ try {
     exit(1);
 }
 
-echo json_encode($extractor->getZomphpFunctions());
+if ($result = $extractor->getZomphpFunctions()) {
+    echo json_encode($result);
+}

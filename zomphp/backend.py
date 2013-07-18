@@ -64,6 +64,9 @@ class BaseBackend(object):
         `strict` might find more false negatives, but less false positives
         Returns the real path of the file on success
         '''
+        return self._do_process_file(path, strict=strict, translator=translator)
+
+    def _do_process_file(self, path, strict=False, translator=None, start_date=None):
         # PHP always unrolls symlinks, at least something it does right :-)
         path = os.path.realpath(path)
         logging.info('Processing file %s' % path)
@@ -74,10 +77,10 @@ class BaseBackend(object):
             return
 
         current_line_nb = 0
-        new_content = ''
+        new_content = u''
         with open(path, 'r') as source:
             while True:
-                current_line = source.readline()
+                current_line = source.readline().decode('utf8')
                 current_line_nb += 1
                 if not current_line:
                     # we're done
@@ -87,12 +90,12 @@ class BaseBackend(object):
                         logging.debug('Function %s:%s:%d appears to be used' % (path, function, current_line_nb))
                     else:
                         logging.debug('Flagging %s:%s:%d as not used!' % (path, function, current_line_nb))
-                        new_content += self._generate_warning(function) + '\n'
+                        new_content += u'%s\n' % self._generate_warning(function)
                 new_content += current_line
 
         # let's replace the old file with the new content
         with open(path, 'w') as new_file:
-            new_file.write(new_content)
+            new_file.write(new_content.encode('utf8'))
 
         return path
 
@@ -104,6 +107,8 @@ class BaseBackend(object):
         return filename.endswith('.php')
 
     def process_directory(self, directory_path, strict=False, translator=None, ignore_sub_dirs=[]):
+        logging.debug('Processing directory %s' % directory_path)
+        start_date = datetime.datetime.now()
         for root, _, files in os.walk(directory_path):
             for rel_path in files:
                 if not self._should_process_file(rel_path):
@@ -120,11 +125,11 @@ class BaseBackend(object):
                         logging.debug('Ignoring file %s in ignored sub-dir %s' % (abs_path, sub_dir))
                         continue
 
-                self.process_file(abs_path, strict, translator)
+                self._do_process_file(abs_path, strict=strict, translator=translator, start_date=start_date)
 
     @staticmethod
-    def _generate_warning(function):
-        return '// ZomPHP warning : the function %s seems be be unused (%s)' % (function, datetime.datetime.now())
+    def _generate_warning(function, start_date=None):
+        return '// ZomPHP warning : the function %s seems be be unused (%s)' % (function, start_date if start_date else datetime.datetime.now())
 
     @staticmethod
     def _get_file_functions(path):
@@ -135,7 +140,7 @@ class BaseBackend(object):
         extract_exec = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib', 'extract_functions.php')
         try:
             data = subprocess.check_output('%s "%s"' % (extract_exec, path), shell=True)
-            return {int(k): v for k, v in json.loads(data).items()}
+            return {int(k): v for k, v in json.loads(data).items()} if data else {}
         except subprocess.CalledProcessError as ex:
             logging.error('Failed to extract functions from %s: %s' % (path, ex.output))
             return {}

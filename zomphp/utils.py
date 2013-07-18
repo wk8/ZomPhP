@@ -4,6 +4,7 @@ import logging
 import sys
 import threading
 import traceback
+import os
 
 from zomphp_settings import LOG_FILE, LOG_LEVEL
 
@@ -15,14 +16,14 @@ def enum(*enums):
     return type('Enum', (), {e: e for e in enums})
 
 
-def set_logger():
+def set_logger(level=None):
     '''
     Sets the right logger
     '''
     logger = logging.getLogger()
     if LOG_FILE:
         # otherwise nothing else to do
-        log_level = getattr(logging, LOG_LEVEL, logging.INFO)
+        log_level = getattr(logging, LOG_LEVEL if level is None else level, logging.INFO)
         logging.basicConfig(level=log_level)
         format = '[%(asctime)s]%(levelname)s:PID %(process)s:Thread %(threadName)s: %(message)s'
         formatter = logging.Formatter(fmt=format)
@@ -43,11 +44,11 @@ class PathTranslator(object):
     '''
 
     def __init__(self, paths_list):
-        if len(path_lists) % 2:
+        if len(paths_list) % 2:
             raise ValueError('You need to provide a list of pairs of path')
-        self._glossary = {s: t for s, t in zip(path_lists[::2], path_lists[1::2])}
+        self._glossary = {s: t for s, t in zip(paths_list[::2], paths_list[1::2])}
 
-    def translate(path):
+    def translate(self, path):
         '''
         Translates an absolute path
         '''
