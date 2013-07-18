@@ -90,7 +90,7 @@ class BaseBackend(object):
                         logging.debug('Function %s:%s:%d appears to be used' % (path, function, current_line_nb))
                     else:
                         logging.debug('Flagging %s:%s:%d as not used!' % (path, function, current_line_nb))
-                        new_content += u'%s\n' % self._generate_warning(function)
+                        new_content += u'%s\n' % self._generate_warning(function, start_date=start_date)
                 new_content += current_line
 
         # let's replace the old file with the new content
