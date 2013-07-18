@@ -39,10 +39,12 @@ class BaseBackend(object):
 
     # DON'T OVERRIDE THE REMAINING FUNCTIONS
 
-    def _function_called(self, filename, function, lineno, strict=False):
+    def _function_called(self, filename, function, lineno, strict=False, translator=translator):
         '''
         Returns True if that function has been called
         '''
+        if translator:
+            filename = translator.translate(filename)
         if strict:
             return self.next_func(filename, lineno) == function
         else:
@@ -56,7 +58,7 @@ class BaseBackend(object):
         filename, _, function = data.rpartition(':')
         self.record(filename, function, lineno)
 
-    def process_file(self, path, strict=False):
+    def process_file(self, path, strict=False, translator=None):
         '''
         Parses a file and marks the unused functions as such!
         `strict` might find more false negatives, but less false positives
@@ -81,7 +83,7 @@ class BaseBackend(object):
                     # we're done
                     break
                 for function in file_functions.get(current_line_nb, []):
-                    if self._function_called(path, function, current_line_nb, strict):
+                    if self._function_called(path, function, current_line_nb, strict, translator=translator):
                         logging.debug('Function %s:%s:%d appears to be used' % (path, function, current_line_nb))
                     else:
                         logging.debug('Flagging %s:%s:%d as not used!' % (path, function, current_line_nb))
@@ -101,7 +103,7 @@ class BaseBackend(object):
         '''
         return filename.endswith('.php')
 
-    def process_directory(self, directory_path, strict=False):
+    def process_directory(self, directory_path, strict=False, translator=None, ignore_sub_dirs=[]):
         for root, _, files in os.walk(directory_path):
             for rel_path in files:
                 if not self._should_process_file(rel_path):
@@ -112,8 +114,13 @@ class BaseBackend(object):
                 real_path = os.path.realpath(abs_path)
                 if real_path != abs_path:
                     logging.debug('Ignoring symlinked file %s, will be processed as %s' % (abs_path, real_path))
+                    continue
+                for sub_dir in ignore_sub_dirs:
+                    if abs_path.startswith(sub_dir):
+                        logging.debug('Ignoring file %s in ignored sub-dir %s' % (abs_path, sub_dir))
+                        continue
 
-                self.process_file(abs_path, strict)
+                self.process_file(abs_path, strict, translator)
 
     @staticmethod
     def _generate_warning(function):
