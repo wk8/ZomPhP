@@ -46,7 +46,7 @@ class PathTranslator(object):
     def __init__(self, paths_list):
         if len(paths_list) % 2:
             raise ValueError('You need to provide a list of pairs of path')
-        self._glossary = {s: t for s, t in zip(paths_list[::2], paths_list[1::2])}
+        self._glossary = {(s if s.endswith(os.sep) else (s + os.sep)) : t for s, t in zip(paths_list[::2], paths_list[1::2])}
 
     def translate(self, path):
         '''
