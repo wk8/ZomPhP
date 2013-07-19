@@ -101,31 +101,39 @@ class BaseBackend(object):
 
     def _should_process_file(self, filename):
         '''
-        Should return True iff we want to process that file
+        Should return True iff we want to process that file,
+        quite independently of other options
         Current policy: we process only *.php files
         '''
         return filename.endswith('.php')
+
+    def _will_process_file(self, root, rel_path, ignore_sub_dirs):
+        '''
+        Returns the full absolute path iff the file is actually going to be processed
+        (None otherwise)
+        '''
+        if not self._should_process_file(rel_path):
+            logging.debug('Ignoring %s file' % rel_path)
+            return None
+        abs_path = os.path.join(root, rel_path)
+        real_path = os.path.realpath(abs_path)
+        if real_path != abs_path:
+            logging.debug('Ignoring symlinked file %s, will be processed as %s' % (abs_path, real_path))
+            return None
+        for sub_dir in ignore_sub_dirs:
+            if abs_path.startswith(sub_dir):
+                logging.debug('Ignoring file %s in ignored sub-dir %s' % (abs_path, sub_dir))
+                return None
+        return abs_path
 
     def process_directory(self, directory_path, strict=False, translator=None, ignore_sub_dirs=[]):
         logging.debug('Processing directory %s' % directory_path)
         start_date = datetime.datetime.now()
         for root, _, files in os.walk(directory_path):
             for rel_path in files:
-                if not self._should_process_file(rel_path):
-                    logging.debug('Ignoring %s file' % rel_path)
-                    continue
-
-                abs_path = os.path.join(root, rel_path)
-                real_path = os.path.realpath(abs_path)
-                if real_path != abs_path:
-                    logging.debug('Ignoring symlinked file %s, will be processed as %s' % (abs_path, real_path))
-                    continue
-                for sub_dir in ignore_sub_dirs:
-                    if abs_path.startswith(sub_dir):
-                        logging.debug('Ignoring file %s in ignored sub-dir %s' % (abs_path, sub_dir))
-                        continue
-
-                self._do_process_file(abs_path, strict=strict, translator=translator, start_date=start_date)
+                abs_path = self._will_process_file(root, rel_path, ignore_sub_dirs)
+                if abs_path:
+                    self._do_process_file(abs_path, strict=strict, translator=translator, start_date=start_date)
 
     @staticmethod
     def _generate_warning(function, start_date=None):
