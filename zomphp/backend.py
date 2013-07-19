@@ -163,15 +163,10 @@ class DummyBackend(BaseBackend):
         logging.debug('DummyBackend received: %s:%s:%s' % (filename, fucntion, lineno))
 
 
-class MongoBackend(BaseBackend):
+class BaseMongoBackend(BaseBackend):
     '''
-    Just records everything in mongo
+    A base backend for mongo - just records everything in mongo
     '''
-
-    # the key names
-    _FILENAME_KEY = 'fl'
-    _FUNCTION_KEY = 'fc'
-    _LINENO_KEY = 'l'
 
     def __init__(self, db_name, col_name, size, user='', password='', **mongo_client_kwargs):
         '''
@@ -185,25 +180,6 @@ class MongoBackend(BaseBackend):
         self._create_mongo_col(client, db_name, col_name, size)
         self._mongo_col = client[db_name][col_name]
         self._ensure_index()
-
-    @staticmethod
-    def _create_mongo_col(client, db_name, col_name, size):
-        '''
-        Creates the right Mongo collection, if not present
-        If it is present, it checks that it's got the right settings, otherwise it deletes it
-        and re-creates it
-        '''
-        db_object = client[db_name]
-        try:
-            return db_object.create_collection(col_name, capped=True, size=size, autoIndexId=False)
-        except pymongo.errors.CollectionInvalid:
-            # the collection already exists, we check it has the right settings
-            # otherwise delete it, and re-create it!
-            logging.info('Checking %s.%s\'s settings' % (db_name, col_name))
-            if not MongoBackend._check_coll_setings(client, db_object[col_name], size):
-                logging.info('Wrong settings, dropping and re-creating collection')
-                db_object.drop_collection(col_name)
-                return MongoBackend._create_mongo_col(client, db_name, col_name, size)
 
     @staticmethod
     def _check_coll_setings(client, col_object, size):
@@ -226,18 +202,55 @@ class MongoBackend(BaseBackend):
         # all good!
         return True
 
+    @staticmethod
+    def _create_mongo_col(client, db_name, col_name, size):
+        '''
+        Creates the right Mongo collection, if not present
+        If it is present, it checks that it's got the right settings, otherwise it deletes it
+        and re-creates it
+        '''
+        db_object = client[db_name]
+        try:
+            return db_object.create_collection(col_name, capped=True, size=size, autoIndexId=False)
+        except pymongo.errors.CollectionInvalid:
+            # the collection already exists, we check it has the right settings
+            # otherwise delete it, and re-create it!
+            logging.info('Checking %s.%s\'s settings' % (db_name, col_name))
+            if not BaseMongoBackend._check_coll_setings(client, db_object[col_name], size):
+                logging.info('Wrong settings, dropping and re-creating collection')
+                db_object.drop_collection(col_name)
+                return BaseMongoBackend._create_mongo_col(client, db_name, col_name, size)
+
     def _ensure_index(self):
         '''
-        Ensures we have the right indexes on the coll
+        Ensures we have the right indexes on the collection
         '''
+        raise NotImplementedError
+
+    def record(self, filename, function, lineno):
+        doc = self._build_mongo_document(filename, function, lineno)
+        self._mongo_col.update(doc, doc, upsert=True, manipulate=False, w=0, check_keys=False)
+
+
+class StrictMongoBackend(BaseMongoBackend):
+    '''
+    Makes sense to use that one if you want to use the --strict option when analyzing
+    Might result in a bigger collection though
+    '''
+
+    # the key names
+    _FILENAME_KEY = 'fl'
+    _FUNCTION_KEY = 'fc'
+    _LINENO_KEY = 'l'
+
+    def _ensure_index(self):
         # the main index, also OK for likely_belongs
         self._mongo_col.ensure_index([(key, pymongo.ASCENDING) for key in (self._FILENAME_KEY, self._FUNCTION_KEY, self._LINENO_KEY)], name='main_index', unique=True, dropDups=True)
         # the index used for next_func
         self._mongo_col.ensure_index([(key, pymongo.ASCENDING) for key in (self._FILENAME_KEY, self._LINENO_KEY, self._FUNCTION_KEY)], name='next_func_index')
 
-    def record(self, filename, function, lineno):
-        doc = {self._FILENAME_KEY: filename, self._FUNCTION_KEY: function, self._LINENO_KEY: int(lineno)}
-        self._mongo_col.update(doc, doc, upsert=True, manipulate=False, w=0, check_keys=False)
+    def _build_mongo_document(self, filename, function, lineno):
+        return {self._FILENAME_KEY: filename, self._FUNCTION_KEY: function, self._LINENO_KEY: int(lineno)}
 
     def likely_belongs(self, filename, function):
         return self._mongo_col.find_one({self._FILENAME_KEY: filename, self._FUNCTION_KEY: function}, fields=[]) is not None
@@ -249,6 +262,27 @@ class MongoBackend(BaseBackend):
         except StopIteration:
             # no such record found
             return None
+
+
+class LooseMongoBackend(BaseMongoBackend):
+    '''
+    Use that one unless you worry about false positives in
+    case of duplicate function names in the same file
+    '''
+
+    _KEY_NAME = 'l'
+
+    def _ensure_index(self):
+        self._mongo_col.ensure_index(self._KEY_NAME, name='zomphp_index', unique=True, dropDups=True)
+
+    def _build_mongo_document(self, filename, function, lineno):
+        return {self._KEY_NAME: '%s:%s' % (filename, function)}
+
+    def likely_belongs(self, filename, function):
+        return self._mongo_col.find_one(self._build_mongo_document(filename, function, 0), fields=[]) is not None
+
+    def next_func(self):
+        raise NotImplementedError('LooseMongoBackend does not support the \'--strict\' option!')
 
 
 def get_new_backend():
