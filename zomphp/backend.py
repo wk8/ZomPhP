@@ -77,10 +77,10 @@ class BaseBackend(object):
             return
 
         current_line_nb = 0
-        new_content = u''
+        new_content = bytes()
         with open(path, 'r') as source:
             while True:
-                current_line = source.readline().decode('utf8')
+                current_line = bytes(source.readline())
                 current_line_nb += 1
                 if not current_line:
                     # we're done
@@ -90,12 +90,12 @@ class BaseBackend(object):
                         logging.debug('Function %s:%s:%d appears to be used' % (path, function, current_line_nb))
                     else:
                         logging.debug('Flagging %s:%s:%d as not used!' % (path, function, current_line_nb))
-                        new_content += u'%s\n' % self._generate_warning(function, start_date=start_date)
+                        new_content += bytes('%s\n' % self._generate_warning(function, start_date=start_date))
                 new_content += current_line
 
         # let's replace the old file with the new content
         with open(path, 'w') as new_file:
-            new_file.write(new_content.encode('utf8'))
+            new_file.write(new_content)
 
         return path
 
