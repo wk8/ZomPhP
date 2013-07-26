@@ -54,6 +54,7 @@ class BaseBackend(object):
         '''
         `data` is a string formatted in the ZomPHP usual form, i.e. path/to/file.php:funcName:lineNo
         '''
+        logging.debug('Processing raw data in backend: %s' % data)
         data, _, lineno = data.rpartition(':')
         filename, _, function = data.rpartition(':')
         self.record(filename, function, lineno)
