@@ -1,1 +1,2 @@
 pymongo>=1.7
+twisted

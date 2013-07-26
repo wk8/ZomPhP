@@ -66,7 +66,7 @@ start: check_root check_venv
 	echo "Starting ZomPHP!"
 	$(eval OWNER := $(shell $(ROOT_DIR)/zomphp/daemon.py --get-owner))
 	# Make sure the socket file is clean ,start the venv, then the daemon itself
-	/bin/bash -c "rm -f /tmp/zomphp.socket" && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/zomphp/daemon.py"
+	/bin/bash -c "rm -f /tmp/zomphp.socket && source $(ROOT_DIR)/$(VENV_DIR_NAME)/bin/activate && daemonize -p $(LCK_FILE) -l $(LCK_FILE) -u $(OWNER) $(ROOT_DIR)/zomphp/daemon.py"
 
 stop: check_root
 	/bin/bash -c "make status &> /dev/null || eval 'echo \"ZomPHP is not running\" && exit 1'"
