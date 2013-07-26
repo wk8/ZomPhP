@@ -39,7 +39,7 @@ class ZomPHPServerFactory(protocol.Factory):
                 self._backend.process_raw_data(item)
 
 
-class ZomPHPApp(object):
+class ZomPHPDaemon(object):
 
     def run(self):
         factory = ZomPHPServerFactory()
@@ -60,8 +60,7 @@ def main():
     else:
         # normal operation
         set_logger()
-        app = ZomPHPApp()
-        app.run()
+        ZomPHPDaemon().run()
 
 
 if __name__ == '__main__':
