@@ -80,6 +80,8 @@ def main():
         for fle in args.files:
             bckend.process_file(fle, args.strict, translator=translator)
 
+    logging.info(bckend.stats)
+
 
 if __name__ == '__main__':
     main()

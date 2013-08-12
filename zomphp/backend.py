@@ -37,7 +37,17 @@ class BaseBackend(object):
         '''
         raise NotImplementedError
 
+    # always call super if you have a custom constructor
+    def __init__(self):
+        self._functions_found = 0
+        self._functions_used = 0
+        self._nb_files_processed = 0
+
     # DON'T OVERRIDE THE REMAINING FUNCTIONS
+
+    @property
+    def stats(self):
+        return 'Processed %d files. Found %d functions, of which %d have been used' % (self._nb_files_processed, self._functions_found, self._functions_used)
 
     def _function_called(self, filename, function, lineno, strict=False, translator=None):
         '''
@@ -68,6 +78,7 @@ class BaseBackend(object):
         return self._do_process_file(path, strict=strict, translator=translator)
 
     def _do_process_file(self, path, strict=False, translator=None, start_date=None):
+        self._nb_files_processed += 1
         # PHP always unrolls symlinks, at least something it does right :-)
         path = os.path.realpath(path)
         logging.info('Processing file %s' % path)
@@ -87,8 +98,10 @@ class BaseBackend(object):
                     # we're done
                     break
                 for function in file_functions.get(current_line_nb, []):
+                    self._functions_found += 1
                     if self._function_called(path, function, current_line_nb, strict, translator=translator):
                         logging.debug('Function %s:%s:%d appears to be used' % (path, function, current_line_nb))
+                        self._functions_used += 1
                     else:
                         logging.debug('Flagging %s:%s:%d as not used!' % (path, function, current_line_nb))
                         new_content += bytes('%s\n' % self._generate_warning(function, start_date=start_date))
@@ -181,6 +194,7 @@ class BaseMongoBackend(BaseBackend):
         self._create_mongo_col(client, db_name, col_name, size)
         self._mongo_col = client[db_name][col_name]
         self._ensure_index()
+        super(BaseMongoBackend, self).__init__()
 
     @staticmethod
     def _check_coll_setings(client, col_object, size):
